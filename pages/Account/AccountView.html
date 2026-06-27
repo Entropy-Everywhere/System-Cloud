@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="View and edit your System Cloud account profile.">
+    <title>System Cloud - Account</title>
+    <link rel="stylesheet" href="../../style.css">
+    <script src="../database.js"></script>
+    <script>
+        DB.checkAuth(false);
+    </script>
+</head>
+
+<body>
+    <div class="container account-page animate-fade-in">
+        <div class="back-bar">
+            <a href="../homepage.html" class="btn-back">← Back to dashboard</a>
+        </div>
+
+        <main class="account-shell">
+            <section class="account-hero glass-card">
+                <div class="account-banner" id="account-banner">
+                    <div class="account-avatar" id="account-avatar">U</div>
+                </div>
+                <div class="account-hero-content">
+                    <div>
+                        <h1 id="account-display-name">Your account</h1>
+                        <p id="account-username" class="subtitle" style="margin-bottom: 10px;">@username</p>
+                        <p id="account-description" class="subtitle" style="margin-bottom: 0;">No description yet.</p>
+                    </div>
+                    <div class="account-stats">
+                        <div class="stat-pill">Alter count <strong id="account-alter-count">0</strong></div>
+                        <div class="stat-pill">Theme <strong id="account-theme-chip">Indigo</strong></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="glass-card account-form-card">
+                <h2>Edit profile</h2>
+                <p class="subtitle">Personalize your system profile and manage your account.</p>
+
+                <form id="account-form">
+                    <div class="form-group">
+                        <label for="profileImageFile">Profile image</label>
+                        <input type="file" id="profileImageFile" class="input-field upload-input" accept="image/*">
+                        <p class="upload-help">Upload a photo directly from your device to use as your profile image.</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="profileBannerFile">Profile banner</label>
+                        <input type="file" id="profileBannerFile" class="input-field upload-input" accept="image/*">
+                        <p class="upload-help">Upload a banner image to appear behind your profile header.</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="profileTheme">Profile color theme</label>
+                        <input type="color" id="profileTheme" class="input-field color-input" value="#6366f1">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="profileDescription">Profile description</label>
+                        <textarea id="profileDescription" class="input-field" rows="4"
+                            placeholder="Tell others a little about your system..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="alterCount">Alter count of system</label>
+                        <input type="text" id="alterCount" class="input-field" readonly value="0">
+                    </div>
+
+                    <div class="button-container">
+                        <button type="submit" class="btn btn-primary">Save profile</button>
+                        <button type="button" id="delete-account-btn" class="btn btn-danger">Delete account</button>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        let currentProfile = null;
+
+        function renderProfile(profile) {
+            if (!profile) {
+                window.location.href = '../login.html';
+                return;
+            }
+
+            currentProfile = profile;
+            const alters = DB.getAlters().filter(item => item.user.toLowerCase() === profile.username.toLowerCase());
+            const banner = document.getElementById('account-banner');
+            const avatar = document.getElementById('account-avatar');
+            const theme = profile.profileThemeColor || '#6366f1';
+
+            document.getElementById('account-display-name').innerText = profile.username;
+            document.getElementById('account-username').innerText = `@${profile.username}`;
+            document.getElementById('account-description').innerText = profile.profileDescription || 'No description yet.';
+            document.getElementById('account-alter-count').innerText = alters.length;
+            document.getElementById('account-theme-chip').innerText = theme.toUpperCase();
+            document.getElementById('profileTheme').value = theme;
+            document.getElementById('profileDescription').value = profile.profileDescription || '';
+            document.getElementById('alterCount').value = alters.length;
+
+            banner.style.background = profile.profileBanner
+                ? `linear-gradient(135deg, ${theme} 0%, rgba(10,12,16,0.88) 100%), url(${profile.profileBanner}) center/cover no-repeat`
+                : `linear-gradient(135deg, ${theme} 0%, rgba(10,12,16,0.88) 100%)`;
+
+            avatar.innerText = profile.username.charAt(0).toUpperCase();
+            avatar.style.backgroundImage = profile.profileImage ? `url(${profile.profileImage})` : 'none';
+            avatar.style.backgroundSize = 'cover';
+            avatar.style.backgroundPosition = 'center';
+            avatar.style.color = profile.profileImage ? 'transparent' : '#fff';
+        }
+
+        function uploadFile(file, key, label) {
+            if (!file || !currentProfile) return;
+
+            const reader = new FileReader();
+            reader.onload = function () {
+                const result = DB.updateUserProfile(currentProfile.username, { [key]: reader.result });
+                if (result.success) {
+                    DB.showToast(`${label} uploaded successfully.`, 'success');
+                    renderProfile(result.user);
+                } else {
+                    DB.showToast(result.message || 'Upload failed.', 'error');
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        document.getElementById('profileImageFile').addEventListener('change', function (event) {
+            const file = event.target.files[0];
+            if (file) {
+                uploadFile(file, 'profileImage', 'Profile image');
+            }
+        });
+
+        document.getElementById('profileBannerFile').addEventListener('change', function (event) {
+            const file = event.target.files[0];
+            if (file) {
+                uploadFile(file, 'profileBanner', 'Profile banner');
+            }
+        });
+
+        document.getElementById('account-form').addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            const profile = DB.getCurrentUserProfile();
+            if (!profile) return;
+
+            const updates = {
+                profileImage: currentProfile?.profileImage || profile.profileImage || '',
+                profileBanner: currentProfile?.profileBanner || profile.profileBanner || '',
+                profileThemeColor: document.getElementById('profileTheme').value,
+                profileDescription: document.getElementById('profileDescription').value.trim()
+            };
+
+            const result = DB.updateUserProfile(profile.username, updates);
+            if (result.success) {
+                DB.showToast('Profile updated successfully.', 'success');
+                renderProfile(result.user);
+            } else {
+                DB.showToast(result.message || 'Unable to save profile.', 'error');
+            }
+        });
+
+        document.getElementById('delete-account-btn').addEventListener('click', function () {
+            const profile = DB.getCurrentUserProfile();
+            if (!profile) return;
+
+            const confirmed = window.confirm(`Delete account "${profile.username}"? This cannot be undone.`);
+            if (!confirmed) return;
+
+            const result = DB.deleteUser(profile.username);
+            if (result.success) {
+                DB.showToast('Account deleted successfully.', 'success');
+                setTimeout(() => {
+                    window.location.href = '../login.html';
+                }, 600);
+            } else {
+                DB.showToast(result.message || 'Unable to delete account.', 'error');
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderProfile(DB.getCurrentUserProfile());
+        });
+    </script>
+</body>
+
+</html>

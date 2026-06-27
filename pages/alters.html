@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Manage your system's alters.">
+    <title>Plural Dashboard - Alters</title>
+    <link rel="stylesheet" href="../style.css">
+    <script src="database.js"></script>
+    <script>
+        DB.checkAuth(false);
+    </script>
+</head>
+
+<body>
+    <header class="navbar" id="dashboard-nav">
+        <div class="nav-brand">System Cloud</div>
+        <div class="nav-user">
+            <span class="user-tag" id="user-display">Loading...</span>
+            <button onclick="DB.logout()" class="btn-logout" id="btn-logout-act">Logout</button>
+        </div>
+    </header>
+
+    <div class="container dashboard-container animate-fade-in" style="max-width: 1100px;">
+        <div class="back-bar">
+            <a href="homepage.html" class="btn-back" id="btn-back-home">&larr; Back to dashboard</a>
+        </div>
+
+        <section class="dashboard-header">
+            <h1>Manage Alters</h1>
+            <p class="subtitle">Search, browse, and edit detailed profiles for members of your plural system</p>
+        </section>
+
+        <main class="dashboard-split">
+            <section class="panel">
+                <h2>Add System Member</h2>
+                <form id="add-alter-form" onsubmit="handleAddAlter(event)">
+                    <div class="form-group">
+                        <label for="altername">Alter Name</label>
+                        <input type="text" id="altername" class="input-field" placeholder="Name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="pronouns">Pronouns</label>
+                        <input type="text" id="pronouns" class="input-field" placeholder="e.g. they/them, she/her" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="category">Category/Role</label>
+                        <select id="category" class="input-field" style="background: rgba(25, 29, 39, 0.95); cursor: pointer;" required>
+                            <option value="" disabled selected>Select role</option>
+                            <option value="Host">Host</option>
+                            <option value="Protector">Protector</option>
+                            <option value="Caregiver">Caregiver</option>
+                            <option value="Persecutor">Persecutor</option>
+                            <option value="Little">Little</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="status">System Status</label>
+                        <select id="status" class="input-field" style="background: rgba(25, 29, 39, 0.95); cursor: pointer;" required>
+                            <option value="Inactive">Inactive</option>
+                            <option value="Fronting">Fronting</option>
+                            <option value="Dormant">Dormant</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Member Description</label>
+                        <textarea id="description" class="input-field" rows="4" placeholder="Describe their role, likes/dislikes, details..." style="resize: vertical;" required></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="btn-add-alter">Add Member</button>
+                </form>
+            </section>
+
+            <section class="panel">
+                <h2>System Directory</h2>
+                <p class="subtitle" style="margin-bottom: 16px;">Click any alter card to open their full profile details below.</p>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label for="alter-search">Search alters</label>
+                    <input type="text" id="alter-search" class="input-field" placeholder="Search by name, role, or description">
+                </div>
+                <div class="import-row" style="margin-bottom: 16px;">
+                    <input type="file" id="import-json-file" accept="application/json,.json" style="display: none;">
+                    <button type="button" id="import-json-btn" class="btn btn-secondary" style="width: auto; padding: 10px 16px;">Import JSON</button>
+                    <span class="upload-help">Import alters from a JSON export file.</span>
+                </div>
+                <div class="list-container" id="alters-list"></div>
+
+                <div class="alter-profile-card hidden" id="alter-profile-card">
+                    <div class="empty-state">Select an alter to view and edit their profile.</div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const currentUser = DB.getCurrentUser();
+        let selectedAlterName = null;
+
+        function getMyAlters() {
+            const allAlters = DB.getAlters();
+            return allAlters.filter(a => a.user.toLowerCase() === currentUser.toLowerCase());
+        }
+
+        function escapeHTML(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function normalizeImportedAlter(raw) {
+            const pick = (...keys) => {
+                for (const key of keys) {
+                    const value = raw?.[key];
+                    if (value !== undefined && value !== null && value !== '') return String(value);
+                }
+                return '';
+            };
+
+            const name = pick('altername', 'alterName', 'name', 'displayName', 'username', 'title').trim();
+            const pronouns = pick('pronouns', 'pronoun', 'pronounSet', 'preferredPronouns').trim();
+            const description = pick('description', 'bio', 'summary', 'notes', 'about').trim();
+            const category = pick('category', 'role', 'type', 'kind').trim() || 'Other';
+            const status = pick('status', 'systemStatus', 'state').trim() || 'Inactive';
+            const profileDescription = pick('profileDescription', 'details', 'profileDetails', 'extraInfo', 'personality').trim();
+            const profileThemeColor = pick('profileThemeColor', 'themeColor', 'theme', 'color').trim() || '#6366f1';
+            const profileImage = pick('profileImage', 'avatar', 'avatarUrl', 'image', 'avatarImage').trim();
+            const profileBanner = pick('profileBanner', 'banner', 'bannerUrl', 'headerImage').trim();
+
+            return {
+                altername: name || 'Imported Alter',
+                description: description || 'Imported from JSON.',
+                prn: pronouns || 'they/them',
+                category: category || 'Other',
+                status: status || 'Inactive',
+                user: currentUser,
+                timestamp: new Date().toISOString(),
+                profileImage,
+                profileBanner,
+                profileDescription,
+                profileThemeColor
+            };
+        }
+
+        function extractAlterCandidates(input) {
+            if (Array.isArray(input)) {
+                return input.filter(item => item && typeof item === 'object');
+            }
+
+            if (input && typeof input === 'object') {
+                const candidates = [];
+                const keysToInspect = ['alters', 'members', 'people', 'data', 'items', 'results'];
+                for (const key of keysToInspect) {
+                    if (Array.isArray(input[key])) {
+                        candidates.push(...input[key].filter(item => item && typeof item === 'object'));
+                    }
+                }
+
+                if (candidates.length > 0) {
+                    return candidates;
+                }
+
+                return [input];
+            }
+
+            return [];
+        }
+
+        function importJsonAlters(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function () {
+                try {
+                    const parsed = JSON.parse(reader.result);
+                    const candidates = extractAlterCandidates(parsed);
+                    const imported = candidates.map(normalizeImportedAlter).filter(alter => alter.altername);
+
+                    if (imported.length === 0) {
+                        DB.showToast('No alter data could be found in that JSON file.', 'error');
+                        return;
+                    }
+
+                    const allAlters = DB.getAlters();
+                    const existingNames = new Set(getMyAlters().map(alter => alter.altername.toLowerCase()));
+                    const merged = [];
+
+                    imported.forEach(alter => {
+                        if (!existingNames.has(alter.altername.toLowerCase())) {
+                            merged.push(alter);
+                            existingNames.add(alter.altername.toLowerCase());
+                        }
+                    });
+
+                    if (merged.length === 0) {
+                        DB.showToast('All imported alters already exist in your system.', 'error');
+                        return;
+                    }
+
+                    allAlters.push(...merged);
+                    DB.saveAlters(allAlters);
+                    DB.showToast(`${merged.length} alter${merged.length === 1 ? '' : 's'} imported successfully.`, 'success');
+                    renderAlters();
+                } catch (error) {
+                    DB.showToast('That file is not valid JSON.', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function renderAlters() {
+            const listContainer = document.getElementById('alters-list');
+            const searchInput = document.getElementById('alter-search');
+            const query = searchInput.value.trim().toLowerCase();
+            const myAlters = getMyAlters();
+            const filteredAlters = myAlters.filter(alter => {
+                const haystack = `${alter.altername} ${alter.category} ${alter.prn} ${alter.description} ${alter.profileDescription || ''}`.toLowerCase();
+                return haystack.includes(query);
+            });
+
+            listContainer.innerHTML = '';
+
+            if (filteredAlters.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="empty-state">
+                        <p>No matching alters found.</p>
+                        <p style="font-size: 0.85rem; margin-top: 8px;">Try a different name, role, or description.</p>
+                    </div>`;
+                return;
+            }
+
+            filteredAlters.forEach((alter) => {
+                const card = document.createElement('article');
+                card.className = `alter-card${selectedAlterName && selectedAlterName.toLowerCase() === alter.altername.toLowerCase() ? ' selected' : ''}`;
+
+                let badgeClass = 'badge-other';
+                if (alter.category === 'Host') badgeClass = 'badge-host';
+                else if (alter.category === 'Protector') badgeClass = 'badge-protector';
+
+                let statusLabel = 'Inactive';
+                let statusDotClass = 'status-inactive';
+                if (alter.status === 'Fronting') {
+                    statusLabel = 'Fronting';
+                    statusDotClass = 'status-fronting';
+                } else if (alter.status === 'Dormant') {
+                    statusLabel = 'Dormant';
+                    statusDotClass = 'status-inactive';
+                }
+
+                card.innerHTML = `
+                    <div class="alter-card-header">
+                        <span class="alter-name">${escapeHTML(alter.altername)}</span>
+                        <span class="alter-badge ${badgeClass}">${escapeHTML(alter.category)}</span>
+                    </div>
+                    <div class="alter-pronouns">${escapeHTML(alter.prn)}</div>
+                    <div class="alter-desc">${escapeHTML(alter.description || 'No description yet.')}</div>
+                    <div class="alter-card-footer">
+                        <span class="alter-status ${statusDotClass}">
+                            <span class="status-dot"></span>
+                            ${statusLabel}
+                        </span>
+                        <span class="alter-view-link">View profile</span>
+                        <button class="btn-delete" type="button" title="Delete member">Delete</button>
+                    </div>
+                `;
+
+                card.addEventListener('click', () => selectAlter(alter.altername));
+                card.querySelector('.btn-delete').addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    deleteAlter(alter.altername);
+                });
+
+                listContainer.appendChild(card);
+            });
+
+            if (!selectedAlterName && filteredAlters.length > 0) {
+                selectAlter(filteredAlters[0].altername);
+            }
+        }
+
+        function selectAlter(name) {
+            selectedAlterName = name;
+            const alter = getMyAlters().find(item => item.altername.toLowerCase() === name.toLowerCase());
+            if (alter) {
+                const profileUrl = `alter-profile.html?alter=${encodeURIComponent(alter.altername)}`;
+                window.open(profileUrl, '_blank', 'noopener,noreferrer');
+            }
+        }
+
+        function renderAlterProfile(alter) {
+            const panel = document.getElementById('alter-profile-card');
+            const theme = alter.profileThemeColor || '#6366f1';
+            const avatar = alter.profileImage || '';
+            const banner = alter.profileBanner || '';
+
+            panel.innerHTML = `
+                <div class="alter-profile-preview" style="background:${banner ? `linear-gradient(135deg, ${theme} 0%, rgba(10,12,16,0.9) 100%), url(${banner}) center/cover no-repeat` : `linear-gradient(135deg, ${theme} 0%, rgba(10,12,16,0.9) 100%)`};">
+                    <div class="alter-profile-avatar" style="background-image:${avatar ? `url(${avatar})` : 'none'}; color:${avatar ? 'transparent' : '#fff'};">${escapeHTML(alter.altername.charAt(0).toUpperCase())}</div>
+                </div>
+                <form id="alter-profile-form" class="alter-profile-form">
+                    <div class="form-group">
+                        <label for="alter-profile-name">Alter name</label>
+                        <input type="text" id="alter-profile-name" class="input-field" value="${escapeHTML(alter.altername)}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="alter-profile-pronouns">Pronouns</label>
+                        <input type="text" id="alter-profile-pronouns" class="input-field" value="${escapeHTML(alter.prn)}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="alter-profile-category">Category/Role</label>
+                        <select id="alter-profile-category" class="input-field" style="background: rgba(25, 29, 39, 0.95); cursor: pointer;" required>
+                            <option value="Host" ${alter.category === 'Host' ? 'selected' : ''}>Host</option>
+                            <option value="Protector" ${alter.category === 'Protector' ? 'selected' : ''}>Protector</option>
+                            <option value="Caregiver" ${alter.category === 'Caregiver' ? 'selected' : ''}>Caregiver</option>
+                            <option value="Persecutor" ${alter.category === 'Persecutor' ? 'selected' : ''}>Persecutor</option>
+                            <option value="Little" ${alter.category === 'Little' ? 'selected' : ''}>Little</option>
+                            <option value="Other" ${alter.category === 'Other' ? 'selected' : ''}>Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="alter-profile-status">System status</label>
+                        <select id="alter-profile-status" class="input-field" style="background: rgba(25, 29, 39, 0.95); cursor: pointer;" required>
+                            <option value="Inactive" ${alter.status === 'Inactive' ? 'selected' : ''}>Inactive</option>
+                            <option value="Fronting" ${alter.status === 'Fronting' ? 'selected' : ''}>Fronting</option>
+                            <option value="Dormant" ${alter.status === 'Dormant' ? 'selected' : ''}>Dormant</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="alter-profile-description">Summary description</label>
+                        <textarea id="alter-profile-description" class="input-field" rows="4">${escapeHTML(alter.description || '')}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="alter-profile-details">Profile details</label>
+                        <textarea id="alter-profile-details" class="input-field" rows="4" placeholder="Add personality notes, likes, dislikes, trigger info, and more...">${escapeHTML(alter.profileDescription || '')}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="alter-profile-theme">Theme color</label>
+                        <input type="color" id="alter-profile-theme" class="input-field color-input" value="${escapeHTML(theme)}">
+                    </div>
+                    <div class="form-group">
+                        <label for="alter-avatar-upload">Avatar image</label>
+                        <input type="file" id="alter-avatar-upload" class="input-field upload-input" accept="image/*">
+                        <p class="upload-help">Upload a portrait or avatar directly from your device.</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="alter-banner-upload">Banner image</label>
+                        <input type="file" id="alter-banner-upload" class="input-field upload-input" accept="image/*">
+                        <p class="upload-help">Upload a banner image to display behind the alter profile.</p>
+                    </div>
+                    <div class="button-container">
+                        <button type="submit" class="btn btn-primary">Save profile</button>
+                        <button type="button" id="alter-delete-btn" class="btn btn-danger">Delete alter</button>
+                    </div>
+                </form>
+            `;
+
+            panel.querySelector('#alter-profile-form').addEventListener('submit', saveAlterProfile);
+            panel.querySelector('#alter-delete-btn').addEventListener('click', () => deleteAlter(alter.altername));
+            panel.querySelector('#alter-avatar-upload').addEventListener('change', (event) => handleImageUpload(event, 'profileImage', 'Avatar'));
+            panel.querySelector('#alter-banner-upload').addEventListener('change', (event) => handleImageUpload(event, 'profileBanner', 'Banner'));
+        }
+
+        function handleImageUpload(event, fieldName, label) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function () {
+                const allAlters = DB.getAlters();
+                const targetAlter = allAlters.find(item => item.user.toLowerCase() === currentUser.toLowerCase() && item.altername.toLowerCase() === selectedAlterName.toLowerCase());
+                if (!targetAlter) return;
+                targetAlter[fieldName] = reader.result;
+                DB.saveAlters(allAlters);
+                DB.showToast(`${label} uploaded.`, 'success');
+                renderAlterProfile(targetAlter);
+                renderAlters();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function saveAlterProfile(event) {
+            event.preventDefault();
+            const form = event.target;
+            const allAlters = DB.getAlters();
+            const targetAlter = allAlters.find(item => item.user.toLowerCase() === currentUser.toLowerCase() && item.altername.toLowerCase() === selectedAlterName.toLowerCase());
+            if (!targetAlter) return;
+
+            const updatedAlter = {
+                ...targetAlter,
+                altername: form.querySelector('#alter-profile-name').value.trim(),
+                prn: form.querySelector('#alter-profile-pronouns').value.trim(),
+                category: form.querySelector('#alter-profile-category').value,
+                status: form.querySelector('#alter-profile-status').value,
+                description: form.querySelector('#alter-profile-description').value.trim(),
+                profileDescription: form.querySelector('#alter-profile-details').value.trim(),
+                profileThemeColor: form.querySelector('#alter-profile-theme').value
+            };
+
+            const index = allAlters.findIndex(item => item.user.toLowerCase() === currentUser.toLowerCase() && item.altername.toLowerCase() === selectedAlterName.toLowerCase());
+            allAlters[index] = updatedAlter;
+            DB.saveAlters(allAlters);
+            DB.showToast('Alter profile saved.', 'success');
+            selectedAlterName = updatedAlter.altername;
+            renderAlters();
+            renderAlterProfile(updatedAlter);
+        }
+
+        function handleAddAlter(event) {
+            event.preventDefault();
+            const name = document.getElementById('altername').value.trim();
+            const prn = document.getElementById('pronouns').value.trim();
+            const category = document.getElementById('category').value;
+            const status = document.getElementById('status').value;
+            const desc = document.getElementById('description').value.trim();
+            const allAlters = DB.getAlters();
+            const exists = allAlters.some(a => a.user.toLowerCase() === currentUser.toLowerCase() && a.altername.toLowerCase() === name.toLowerCase());
+
+            if (exists) {
+                DB.showToast('An alter with this name already exists in your system.', 'error');
+                return;
+            }
+
+            const newAlter = {
+                altername: name,
+                description: desc,
+                prn: prn,
+                category: category,
+                status: status,
+                user: currentUser,
+                timestamp: new Date().toISOString(),
+                profileImage: '',
+                profileBanner: '',
+                profileDescription: '',
+                profileThemeColor: '#6366f1'
+            };
+
+            allAlters.push(newAlter);
+            DB.saveAlters(allAlters);
+
+            if (status === 'Fronting') {
+                const fronters = DB.getFronters();
+                if (!fronters[currentUser]) {
+                    fronters[currentUser] = [];
+                }
+                if (!fronters[currentUser].includes(name)) {
+                    fronters[currentUser].push(name);
+                }
+                DB.saveFronters(fronters);
+            }
+
+            DB.showToast(`${name} added to the system directory!`, 'success');
+            document.getElementById('add-alter-form').reset();
+            selectedAlterName = name;
+            renderAlters();
+            renderAlterProfile(newAlter);
+        }
+
+        function deleteAlter(name) {
+            if (!confirm(`Are you sure you want to delete ${name}?`)) {
+                return;
+            }
+
+            let allAlters = DB.getAlters();
+            allAlters = allAlters.filter(a => !(a.user.toLowerCase() === currentUser.toLowerCase() && a.altername.toLowerCase() === name.toLowerCase()));
+            DB.saveAlters(allAlters);
+
+            const fronters = DB.getFronters();
+            if (fronters[currentUser]) {
+                fronters[currentUser] = fronters[currentUser].filter(f => f.toLowerCase() !== name.toLowerCase());
+                DB.saveFronters(fronters);
+            }
+
+            DB.showToast(`${name} removed from the system.`, 'success');
+            selectedAlterName = null;
+            renderAlters();
+            document.getElementById('alter-profile-card').classList.add('hidden');
+            document.getElementById('alter-profile-card').innerHTML = '<div class="empty-state">Select an alter to view and edit their profile.</div>';
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!currentUser) return;
+            document.getElementById('user-display').innerText = `System: ${currentUser}`;
+            document.getElementById('alter-search').addEventListener('input', renderAlters);
+            document.getElementById('import-json-btn').addEventListener('click', () => document.getElementById('import-json-file').click());
+            document.getElementById('import-json-file').addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    importJsonAlters(file);
+                    event.target.value = '';
+                }
+            });
+            renderAlters();
+        });
+    </script>
+</body>
+
+</html>

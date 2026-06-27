@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Create a new account on System Cloud.">
+    <title>System Cloud - Sign Up</title>
+    <link rel="stylesheet" href="../style.css">
+    <script src="database.js"></script>
+    <script>
+        // Redirect to homepage if already logged in
+        DB.checkAuth(true);
+
+        function handleSignup(event) {
+            event.preventDefault();
+            const user = document.getElementById("userinput").value.trim();
+            const email = document.getElementById("emailinput").value.trim();
+            const pass = document.getElementById("passwordinput").value;
+            const repass = document.getElementById("repasswordinput").value;
+
+            if (!user) {
+                DB.showToast("Username cannot be empty.", "error");
+                return;
+            }
+            if (!email) {
+                DB.showToast("Email cannot be empty.", "error");
+                return;
+            }
+            if (!pass) {
+                DB.showToast("Password cannot be empty.", "error");
+                return;
+            }
+            if (pass !== repass) {
+                DB.showToast("Passwords do not match.", "error");
+                return;
+            }
+
+            const result = DB.signup(user, email, pass);
+            if (result.success) {
+                DB.showToast("Account created successfully! Logging you in...", "success");
+                setTimeout(() => {
+                    window.location.href = "homepage.html";
+                }, 1000);
+            } else {
+                DB.showToast(result.message, "error");
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <div class="container animate-fade-in">
+        <div class="back-bar">
+            <a href="../index.html" class="btn-back" id="btn-back-landing">
+                &larr; Back to welcome
+            </a>
+        </div>
+
+        <main class="glass-card">
+            <h1>Create Account</h1>
+            <p class="subtitle">Join and start managing your system details today</p>
+
+            <form onsubmit="handleSignup(event)" id="signup-form">
+                <div class="form-group">
+                    <label for="userinput">Username</label>
+                    <input type="text" id="userinput" class="input-field" placeholder="Username" required
+                        autocomplete="username">
+                </div>
+
+                <div class="form-group">
+                    <label for="emailinput">Email Address</label>
+                    <input type="email" id="emailinput" class="input-field" placeholder="you@example.com" required
+                        autocomplete="email">
+                </div>
+
+                <div class="form-group">
+                    <label for="passwordinput">Password</label>
+                    <input type="password" id="passwordinput" class="input-field" placeholder="••••••••" required
+                        autocomplete="new-password">
+                </div>
+
+                <div class="form-group">
+                    <label for="repasswordinput">Confirm Password</label>
+                    <input type="password" id="repasswordinput" class="input-field" placeholder="••••••••" required
+                        autocomplete="new-password">
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="btn-submit-signup">Register Now</button>
+            </form>
+
+            <a href="login.html" class="link-muted" id="link-to-login">Already have an account? Sign in here</a>
+        </main>
+    </div>
+</body>
+
+</html>

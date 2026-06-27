@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Track active fronters in your system.">
+    <title>System Cloud - Fronters</title>
+    <link rel="stylesheet" href="../style.css">
+    <script src="database.js"></script>
+    <script>
+        // Guard route: redirect to login if not authenticated
+        DB.checkAuth(false);
+    </script>
+</head>
+
+<body>
+    <!-- Premium Navigation Bar -->
+    <header class="navbar" id="dashboard-nav">
+        <div class="nav-brand">System Cloud</div>
+        <div class="nav-user">
+            <span class="user-tag" id="user-display">Loading...</span>
+            <button onclick="DB.logout()" class="btn-logout" id="btn-logout-act">Logout</button>
+        </div>
+    </header>
+
+    <div class="container dashboard-container animate-fade-in" style="max-width: 1000px;">
+        <div class="back-bar">
+            <a href="homepage.html" class="btn-back" id="btn-back-home">
+                &larr; Back to dashboard
+            </a>
+        </div>
+
+        <section class="dashboard-header">
+            <h1>Active Fronters</h1>
+            <p class="subtitle">Track and log who is currently active and fronting in the system</p>
+        </section>
+
+        <!-- Main Workspace Split -->
+        <main class="dashboard-split">
+
+            <!-- Left Side: Toggle checkboxes to set active status -->
+            <section class="panel">
+                <h2>Set Fronting Status</h2>
+                <form id="fronting-form" onsubmit="handleSaveFronters(event)">
+                    <div id="no-alters-warning" class="empty-state" style="display: none; padding: 20px 0;">
+                        <p style="color: #f87171;">No system members available.</p>
+                        <a href="alters.html" class="btn btn-secondary"
+                            style="margin-top: 16px; font-size: 0.85rem; padding: 8px 16px; width: auto;">Add members
+                            first</a>
+                    </div>
+
+                    <div id="checklist-container" style="display: none;">
+                        <p class="subtitle" style="margin-bottom: 16px;">Check system members who are currently active:
+                        </p>
+                        <div class="checkbox-grid" id="alters-checkboxes">
+                            <!-- Checkboxes will load dynamically -->
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="btn-save-fronters">Update Active
+                            Front</button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Right Side: Show active cards -->
+            <section class="panel">
+                <h2>Currently Fronting</h2>
+                <div id="active-fronters-display" class="fronting-list" style="margin-top: 16px;">
+                    <!-- Active cards rendered dynamically -->
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        const currentUser = DB.getCurrentUser();
+
+        function loadFrontersDashboard() {
+            const alters = DB.getAlters().filter(a => a.user.toLowerCase() === currentUser.toLowerCase());
+            const frontersData = DB.getFronters();
+            const activeFronters = frontersData[currentUser] || [];
+
+            const warningDiv = document.getElementById('no-alters-warning');
+            const checklistDiv = document.getElementById('checklist-container');
+            const checkboxGrid = document.getElementById('alters-checkboxes');
+            const activeDisplay = document.getElementById('active-fronters-display');
+
+            // 1. Manage checklist layout on the left panel
+            if (alters.length === 0) {
+                warningDiv.style.display = 'block';
+                checklistDiv.style.display = 'none';
+            } else {
+                warningDiv.style.display = 'none';
+                checklistDiv.style.display = 'block';
+
+                checkboxGrid.innerHTML = '';
+                alters.forEach(alter => {
+                    const isChecked = activeFronters.includes(alter.altername);
+                    const label = document.createElement('label');
+                    label.className = 'checkbox-item';
+                    label.innerHTML = `
+                        <input type="checkbox" name="fronter-check" value="${escapeHTML(alter.altername)}" ${isChecked ? 'checked' : ''}>
+                        <span>${escapeHTML(alter.altername)} <small style="color: var(--text-muted); font-weight: normal; margin-left: 6px;">(${alter.category})</small></span>
+                    `;
+                    checkboxGrid.appendChild(label);
+                });
+            }
+
+            // 2. Render cards for actively fronting alters on the right panel
+            activeDisplay.innerHTML = '';
+
+            // Get full details of fronting alters
+            const activeAlterDetails = alters.filter(a => activeFronters.includes(a.altername));
+
+            if (activeAlterDetails.length === 0) {
+                activeDisplay.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1; width: 100%;">
+                        <p>No one is currently logged as fronting.</p>
+                        <p style="font-size: 0.85rem; margin-top: 8px;">Select active members from the list on the left to set them.</p>
+                    </div>`;
+                return;
+            }
+
+            activeAlterDetails.forEach(alter => {
+                const card = document.createElement('article');
+                card.className = 'alter-card fronters-card-active';
+
+                let badgeClass = 'badge-other';
+                if (alter.category === 'Host') badgeClass = 'badge-host';
+                else if (alter.category === 'Protector') badgeClass = 'badge-protector';
+
+                card.innerHTML = `
+                    <div class="alter-card-header">
+                        <span class="alter-name">${escapeHTML(alter.altername)}</span>
+                        <span class="alter-badge ${badgeClass}">${alter.category}</span>
+                    </div>
+                    <div class="alter-pronouns">${escapeHTML(alter.prn)}</div>
+                    <div class="alter-desc">${escapeHTML(alter.description)}</div>
+                    <div class="alter-card-footer">
+                        <span class="alter-status status-fronting">
+                            <span class="status-dot"></span>
+                            Active Now
+                        </span>
+                        <button class="btn-delete" onclick="quickRemoveFronter('${alter.altername}')" style="color: #f87171;" title="Remove from front">Remove</button>
+                    </div>
+                `;
+                activeDisplay.appendChild(card);
+            });
+        }
+
+        // Handle Save action
+        function handleSaveFronters(event) {
+            event.preventDefault();
+            const checkedBoxes = document.querySelectorAll('input[name="fronter-check"]:checked');
+            const newFronters = Array.from(checkedBoxes).map(cb => cb.value);
+
+            // Save in fronters mapping
+            const frontersData = DB.getFronters();
+            frontersData[currentUser] = newFronters;
+            DB.saveFronters(frontersData);
+
+            // Sync with alters collection status
+            const allAlters = DB.getAlters();
+            allAlters.forEach(alter => {
+                if (alter.user.toLowerCase() === currentUser.toLowerCase()) {
+                    if (newFronters.includes(alter.altername)) {
+                        alter.status = 'Fronting';
+                    } else {
+                        alter.status = 'Inactive';
+                    }
+                }
+            });
+            DB.saveAlters(allAlters);
+
+            DB.showToast("Active fronters updated!", "success");
+            loadFrontersDashboard();
+        }
+
+        // Quick remove button directly on the active cards
+        function quickRemoveFronter(name) {
+            const frontersData = DB.getFronters();
+            if (frontersData[currentUser]) {
+                // Filter out the name
+                frontersData[currentUser] = frontersData[currentUser].filter(f => f !== name);
+                DB.saveFronters(frontersData);
+
+                // Sync with alters collection
+                const allAlters = DB.getAlters();
+                allAlters.forEach(alter => {
+                    if (alter.user.toLowerCase() === currentUser.toLowerCase() && alter.altername === name) {
+                        alter.status = 'Inactive';
+                    }
+                });
+                DB.saveAlters(allAlters);
+
+                DB.showToast(`${name} removed from the active front.`, "success");
+                loadFrontersDashboard();
+            }
+        }
+
+        function escapeHTML(str) {
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!currentUser) return;
+            document.getElementById('user-display').innerText = `System: ${currentUser}`;
+            loadFrontersDashboard();
+        });
+    </script>
+</body>
+
+</html>

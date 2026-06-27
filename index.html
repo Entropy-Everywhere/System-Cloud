@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="A premium, secure personal dashboard to manage your system's alters and track active fronters.">
+    <meta name="theme-color" content="#6366f1">
+    <title>System Cloud</title>
+    <link rel="stylesheet" href="./style.css">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="apple-touch-icon" href="./icons/SystemCloudLogo.png">
+</head>
+
+<body>
+    <div class="container animate-fade-in">
+        <main class="glass-card" id="welcome-card">
+            <h1>System Cloud</h1>
+            <p class="subtitle">A secure, personal dashboard to manage your system's alters and track active fronters.
+            </p>
+
+            <div class="button-container">
+                <a class="btn btn-primary" href="pages/login.html" id="btn-login-redirect">Login</a>
+                <a class="btn btn-secondary" href="pages/signup.html" id="btn-signup-redirect">Create Account</a>
+            </div>
+        </main>
+    </div>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+            });
+        }
+    </script>
+</body>
+
+</html>

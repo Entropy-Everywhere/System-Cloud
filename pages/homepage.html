@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="System Cloud Home.">
+    <title>System Cloud - Home</title>
+    <link rel="stylesheet" href="../style.css">
+    <script src="database.js"></script>
+    <script>
+        // Guard route: redirect to login if not authenticated
+        DB.checkAuth(false);
+    </script>
+</head>
+
+<body>
+    <!-- Premium Navigation Bar -->
+    <header class="navbar" id="dashboard-nav">
+        <div class="nav-brand">System Cloud</div>
+        <div class="nav-user">
+            <a href="Account/AccountView.html" class="user-tag" id="user-display" style="text-decoration: none;">Loading...</a>
+            <button onclick="DB.logout()" class="btn-logout" id="btn-logout-act">Logout</button>
+        </div>
+    </header>
+
+    <div class="container dashboard-container animate-fade-in">
+        <section class="dashboard-header">
+            <h1 id="welcome-heading">Welcome back!</h1>
+            <p class="subtitle" style="margin-bottom: 0;">Here is a summary of your system status</p>
+        </section>
+
+        <!-- Dynamic Statistics Cards -->
+        <main class="dashboard-grid">
+            <a href="alters.html" class="card-nav" id="card-nav-alters">
+                <div>
+                    <h3>Alters</h3>
+                    <p>Manage list of system members, edit descriptions, pronouns, and tracking categories.</p>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; width: 100%;">
+                    <span class="user-tag" id="stat-alters-count">0 members</span>
+                    <span class="card-arrow">&rarr;</span>
+                </div>
+            </a>
+
+            <a href="fronters.html" class="card-nav" id="card-nav-fronters">
+                <div>
+                    <h3>Fronters</h3>
+                    <p>Track which system members are currently fronting and log active times.</p>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; width: 100%;">
+                    <span class="user-tag" id="stat-fronters-active"
+                        style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); color: #34d399;">None
+                        active</span>
+                    <span class="card-arrow">&rarr;</span>
+                </div>
+            </a>
+        </main>
+    </div>
+
+    <script>
+        // Load data on window load
+        window.addEventListener('DOMContentLoaded', () => {
+            const currentUser = DB.getCurrentUser();
+            if (!currentUser) return;
+
+            // Update user tag
+            document.getElementById('user-display').innerText = `System: ${currentUser}`;
+            document.getElementById('welcome-heading').innerText = `Welcome back, ${currentUser}!`;
+
+            // Fetch statistical values
+            const alters = DB.getAlters().filter(a => a.user.toLowerCase() === currentUser.toLowerCase());
+            const fronters = DB.getFronters()[currentUser] || [];
+
+            // Update Alters count display
+            document.getElementById('stat-alters-count').innerText = `${alters.length} system member${alters.length === 1 ? '' : 's'}`;
+
+            // Update Fronters display
+            if (fronters.length > 0) {
+                document.getElementById('stat-fronters-active').innerText = `${fronters.length} active: ${fronters.join(', ')}`;
+            } else {
+                document.getElementById('stat-fronters-active').innerText = 'No one is fronting';
+                document.getElementById('stat-fronters-active').style.color = 'var(--text-muted)';
+                document.getElementById('stat-fronters-active').style.borderColor = 'var(--glass-border)';
+                document.getElementById('stat-fronters-active').style.background = 'rgba(255, 255, 255, 0.02)';
+            }
+        });
+    </script>
+</body>
+
+</html>

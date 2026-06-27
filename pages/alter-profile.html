@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="View and edit a specific alter profile.">
+    <title>System Cloud - Alter Profile</title>
+    <link rel="stylesheet" href="../style.css">
+    <script src="database.js"></script>
+    <script>
+        DB.checkAuth(false);
+    </script>
+</head>
+
+<body>
+    <div class="container account-page animate-fade-in">
+        <div class="back-bar">
+            <a href="alters.html" class="btn-back">← Back to alters</a>
+        </div>
+
+        <main class="account-shell">
+            <section class="account-hero glass-card" id="alter-profile-hero">
+                <div class="account-banner" id="alter-banner">
+                    <div class="account-avatar" id="alter-avatar">A</div>
+                </div>
+                <div class="account-hero-content">
+                    <div>
+                        <h1 id="alter-name">Alter profile</h1>
+                        <p id="alter-pronouns" class="subtitle" style="margin-bottom: 10px;">Pronouns</p>
+                        <p id="alter-summary" class="subtitle" style="margin-bottom: 0;">Summary</p>
+                    </div>
+                    <div class="account-stats">
+                        <div class="stat-pill">Status <strong id="alter-status">Inactive</strong></div>
+                        <div class="stat-pill">Role <strong id="alter-role">Other</strong></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="glass-card account-form-card">
+                <h2>Edit alter profile</h2>
+                <p class="subtitle">Update the profile details, uploads, and theme for this alter.</p>
+
+                <form id="alter-detail-form">
+                    <div class="form-group">
+                        <label for="alter-form-name">Alter name</label>
+                        <input type="text" id="alter-form-name" class="input-field" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="alter-form-pronouns">Pronouns</label>
+                        <input type="text" id="alter-form-pronouns" class="input-field" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="alter-form-category">Category/Role</label>
+                        <select id="alter-form-category" class="input-field" required>
+                            <option value="Host">Host</option>
+                            <option value="Protector">Protector</option>
+                            <option value="Caregiver">Caregiver</option>
+                            <option value="Persecutor">Persecutor</option>
+                            <option value="Little">Little</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="alter-form-status">System status</label>
+                        <select id="alter-form-status" class="input-field" required>
+                            <option value="Inactive">Inactive</option>
+                            <option value="Fronting">Fronting</option>
+                            <option value="Dormant">Dormant</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="alter-form-description">Summary description</label>
+                        <textarea id="alter-form-description" class="input-field" rows="4"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="alter-form-details">Profile details</label>
+                        <textarea id="alter-form-details" class="input-field" rows="5" placeholder="Add personality notes, likes, dislikes, triggers, and more..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="alter-form-theme">Theme color</label>
+                        <input type="color" id="alter-form-theme" class="input-field color-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="alter-avatar-upload">Avatar image</label>
+                        <input type="file" id="alter-avatar-upload" class="input-field upload-input" accept="image/*">
+                        <p class="upload-help">Upload a portrait or avatar directly from your device.</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="alter-banner-upload">Banner image</label>
+                        <input type="file" id="alter-banner-upload" class="input-field upload-input" accept="image/*">
+                        <p class="upload-help">Upload a banner image to display behind the alter profile.</p>
+                    </div>
+                    <div class="button-container">
+                        <button type="submit" class="btn btn-primary">Save alter profile</button>
+                        <button type="button" id="alter-delete-btn" class="btn btn-danger">Delete alter</button>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const currentUser = DB.getCurrentUser();
+        let currentAlter = null;
+
+        function getAlterFromQuery() {
+            const params = new URLSearchParams(window.location.search);
+            const name = params.get('alter');
+            if (!name || !currentUser) return null;
+            const alters = DB.getAlters();
+            return alters.find(item => item.user.toLowerCase() === currentUser.toLowerCase() && item.altername.toLowerCase() === name.toLowerCase()) || null;
+        }
+
+        function renderAlter(alter) {
+            if (!alter) {
+                document.getElementById('alter-name').innerText = 'Alter not found';
+                return;
+            }
+
+            currentAlter = alter;
+            const theme = alter.profileThemeColor || '#6366f1';
+            const banner = document.getElementById('alter-banner');
+            const avatar = document.getElementById('alter-avatar');
+
+            document.getElementById('alter-name').innerText = alter.altername;
+            document.getElementById('alter-pronouns').innerText = alter.prn;
+            document.getElementById('alter-summary').innerText = alter.description || 'No summary yet.';
+            document.getElementById('alter-status').innerText = alter.status || 'Inactive';
+            document.getElementById('alter-role').innerText = alter.category || 'Other';
+            document.getElementById('alter-form-name').value = alter.altername;
+            document.getElementById('alter-form-pronouns').value = alter.prn || '';
+            document.getElementById('alter-form-category').value = alter.category || 'Other';
+            document.getElementById('alter-form-status').value = alter.status || 'Inactive';
+            document.getElementById('alter-form-description').value = alter.description || '';
+            document.getElementById('alter-form-details').value = alter.profileDescription || '';
+            document.getElementById('alter-form-theme').value = theme;
+
+            banner.style.background = alter.profileBanner
+                ? `linear-gradient(135deg, ${theme} 0%, rgba(10,12,16,0.88) 100%), url(${alter.profileBanner}) center/cover no-repeat`
+                : `linear-gradient(135deg, ${theme} 0%, rgba(10,12,16,0.88) 100%)`;
+            avatar.innerText = alter.altername.charAt(0).toUpperCase();
+            avatar.style.backgroundImage = alter.profileImage ? `url(${alter.profileImage})` : 'none';
+            avatar.style.backgroundSize = 'cover';
+            avatar.style.backgroundPosition = 'center';
+            avatar.style.color = alter.profileImage ? 'transparent' : '#fff';
+        }
+
+        function handleImageUpload(event, fieldName, label) {
+            const file = event.target.files[0];
+            if (!file || !currentAlter) return;
+            const reader = new FileReader();
+            reader.onload = function () {
+                const alters = DB.getAlters();
+                const targetAlter = alters.find(item => item.user.toLowerCase() === currentUser.toLowerCase() && item.altername.toLowerCase() === currentAlter.altername.toLowerCase());
+                if (!targetAlter) return;
+                targetAlter[fieldName] = reader.result;
+                DB.saveAlters(alters);
+                DB.showToast(`${label} uploaded.`, 'success');
+                renderAlter(targetAlter);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        document.getElementById('alter-detail-form').addEventListener('submit', function (event) {
+            event.preventDefault();
+            if (!currentAlter) return;
+            const alters = DB.getAlters();
+            const index = alters.findIndex(item => item.user.toLowerCase() === currentUser.toLowerCase() && item.altername.toLowerCase() === currentAlter.altername.toLowerCase());
+            if (index === -1) return;
+
+            alters[index] = {
+                ...alters[index],
+                altername: document.getElementById('alter-form-name').value.trim(),
+                prn: document.getElementById('alter-form-pronouns').value.trim(),
+                category: document.getElementById('alter-form-category').value,
+                status: document.getElementById('alter-form-status').value,
+                description: document.getElementById('alter-form-description').value.trim(),
+                profileDescription: document.getElementById('alter-form-details').value.trim(),
+                profileThemeColor: document.getElementById('alter-form-theme').value
+            };
+            DB.saveAlters(alters);
+            DB.showToast('Alter profile saved.', 'success');
+            renderAlter(alters[index]);
+        });
+
+        document.getElementById('alter-delete-btn').addEventListener('click', function () {
+            if (!currentAlter) return;
+            if (!confirm(`Delete ${currentAlter.altername}?`)) return;
+            let alters = DB.getAlters();
+            alters = alters.filter(item => !(item.user.toLowerCase() === currentUser.toLowerCase() && item.altername.toLowerCase() === currentAlter.altername.toLowerCase()));
+            DB.saveAlters(alters);
+            const fronters = DB.getFronters();
+            if (fronters[currentUser]) {
+                fronters[currentUser] = fronters[currentUser].filter(name => name.toLowerCase() !== currentAlter.altername.toLowerCase());
+                DB.saveFronters(fronters);
+            }
+            DB.showToast('Alter deleted.', 'success');
+            window.location.href = 'alters.html';
+        });
+
+        document.getElementById('alter-avatar-upload').addEventListener('change', (event) => handleImageUpload(event, 'profileImage', 'Avatar'));
+        document.getElementById('alter-banner-upload').addEventListener('change', (event) => handleImageUpload(event, 'profileBanner', 'Banner'));
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderAlter(getAlterFromQuery());
+        });
+    </script>
+</body>
+
+</html>

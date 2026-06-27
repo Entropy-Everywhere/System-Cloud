@@ -1,0 +1,21 @@
+{
+  "name": "System Cloud",
+  "short_name": "System Cloud",
+  "description": "A personal dashboard to manage alters, fronters, and account profiles.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0a0c10",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "./icons/SystemCloudLogo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./icons/SystemCloudLogo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
