@@ -18,6 +18,15 @@ Your site will be available at:
 
 The PWA uses the logo file at `icons/SystemCloudLogo.png` as the install icon and app image.
 
+## Itch.io / web packaging
+
+To publish this app on Itch.io as a web project:
+
+1. Zip the entire project folder.
+2. Upload the zip to Itch.io as a web project.
+3. Make sure the uploaded files include `index.html` at the top level.
+4. Set the project to open the app in the browser from that uploaded build.
+
 ## Local preview
 
 Open `index.html` in a browser, or serve the folder with a simple static server.
