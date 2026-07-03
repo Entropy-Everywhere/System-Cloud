@@ -798,6 +798,69 @@ select.input-field {
   border-left: 1px dashed rgba(255, 255, 255, 0.08);
 }
 
+.folder-card.folder-card-clickable {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.folder-card.folder-card-clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 12, 16, 0.75);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  z-index: 1000;
+}
+
+.folder-modal {
+  width: min(600px, 100%);
+  background: var(--glass-bg);
+  border: 2px solid #6366f1;
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+  max-height: min(85vh, 800px);
+  overflow-y: auto;
+}
+
+.folder-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.folder-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.folder-modal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0;
+}
+
+.folder-modal-alter {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.folder-modal-close {
+  min-width: auto;
+}
+
 .folder-meta {
   color: var(--text-muted);
   font-size: 0.82rem;

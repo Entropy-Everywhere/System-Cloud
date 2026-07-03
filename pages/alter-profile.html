@@ -37,23 +37,23 @@
                     </div>
                 </div>
             </section>
-            <button id="btn-edit-profile" class="btn btn-primary">Edit Profile</button>
-            <section class="glass-card account-form-card" id="alter-form-section">
+            <button id="btn-edit-profile" class="btn btn-primary" onclick="toggleForm()">Edit Profile</button>
+            <section class="glass-card account-form-card" id="alter-form-section" style="visibility: hidden;">
                 <h2>Edit alter profile</h2>
                 <p class="subtitle">Update the profile details, uploads, and theme for this alter.</p>
 
                 <form id="alter-detail-form">
                     <div class="form-group">
                         <label for="alter-form-name">Alter name</label>
-                        <input type="text" id="alter-form-name" class="input-field" required>
+                        <input type="text" id="alter-form-name" class="input-field">
                     </div>
                     <div class="form-group">
                         <label for="alter-form-pronouns">Pronouns</label>
-                        <input type="text" id="alter-form-pronouns" class="input-field" required>
+                        <input type="text" id="alter-form-pronouns" class="input-field">
                     </div>
                     <div class="form-group">
                         <label for="alter-form-category">Category/Role</label>
-                        <select id="alter-form-category" class="input-field" required>
+                        <select id="alter-form-category" class="input-field">
                             <option value="Host">Host</option>
                             <option value="Protector">Protector</option>
                             <option value="Caregiver">Caregiver</option>
@@ -81,7 +81,7 @@
                         <p class="upload-help">Upload a banner image to display behind the alter profile.</p>
                     </div>
                     <div class="button-container">
-                        <button type="submit" class="btn btn-primary">Save alter profile</button>
+                        <button type="submit" class="btn btn-primary" onclick="saveAlterProfile(), toggleForm()">Save alter profile</button>
                         <button type="button" id="alter-delete-btn" class="btn btn-danger">Delete alter</button>
                     </div>
                 </form>
@@ -90,6 +90,28 @@
     </div>
 
     <script>
+        function saveAlterProfile() {
+            const alters = DB.getAlters();
+            const index = alters.findIndex(item => item.user.toLowerCase() === currentUser.toLowerCase() && item.altername.toLowerCase() === currentAlter.altername.toLowerCase());
+            if (index === -1) return;
+
+            alters[index] = {
+                ...alters[index],
+                altername: document.getElementById('alter-form-name').value.trim(),
+                prn: document.getElementById('alter-form-pronouns').value.trim(),
+                category: document.getElementById('alter-form-category').value,
+                description: document.getElementById('alter-form-details').value.trim(),
+                profileThemeColor: document.getElementById('alter-form-theme').value
+            };
+            DB.saveAlters(alters);
+            DB.showToast('Alter profile saved.', 'success');
+            renderAlter(alters[index]);
+        }
+        function toggleForm() {
+            const formSection = document.getElementById('alter-form-section');
+            formSection.style.visibility = formSection.style.visibility === 'visible' ? 'hidden' : 'visible';
+        }
+
         const currentUser = DB.getCurrentUser();
         let currentAlter = null;
 

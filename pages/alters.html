@@ -20,7 +20,6 @@
         <div class="nav-user">
             <button id="menu-toggle" class="btn btn-secondary">Menu</button>
             <a href="Account/AccountView.html" class="user-tag" id="user-display">Loading...</a>
-            <a href="settings.html" class="btn btn-secondary">Settings</a>
             <button onclick="DB.logout()" class="btn btn-logout" id="btn-logout-act">Logout</button>
         </div>
     </header>
@@ -92,6 +91,10 @@
                             </select>
                         </div>
                         <div class="form-group">
+                            <label for="folder-theme" class="folder-select-label">Folder color theme</label>
+                            <input type="color" id="folder-theme" class="input-field color-input" value="#6366f1">
+                        </div>
+                        <div class="form-group">
                             <label for="folder-alters" class="folder-select-label">Assign alters</label>
                             <select id="folder-alters" class="input-field" multiple size="4"></select>
                         </div>
@@ -109,12 +112,69 @@
                     <div class="empty-state">Select an alter to view and edit their profile.</div>
                 </div>
             </section>
+            <div id="fronting-modal" class="modal-overlay hidden">
+                <div class="folder-modal fronting-modal" id="fronting-modal-content" style="width: min(520px, 100%);">
+                    <div class="folder-modal-header">
+                        <div>
+                            <h3 id="fronting-modal-title">Fronting details</h3>
+                            <p class="subtitle" id="fronting-modal-sub"></p>
+                        </div>
+                        <button type="button" class="folder-modal-close btn btn-secondary" id="fronting-modal-close">Close</button>
+                    </div>
+                    <div class="folder-modal-body">
+                        <input type="hidden" id="fronting-alter-name" value="">
+                        <div class="form-group">
+                            <label for="alter-form-fronting-role">Fronting role</label>
+                            <select id="alter-form-fronting-role" class="input-field">
+                                <option value="Front">Front</option>
+                                <option value="Co-front">Co-front</option>
+                                <option value="Co-conscious">Co-conscious</option>
+                                <option value="Background">Background</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="alter-form-mood">Mood (1-5)</label>
+                            <input type="range" id="alter-form-mood" class="input-field" min="1" max="5" value="3">
+                            <div class="range-value" id="mood-value">3</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="alter-form-energy">Energy (1-5)</label>
+                            <input type="range" id="alter-form-energy" class="input-field" min="1" max="5" value="3">
+                            <div class="range-value" id="energy-value">3</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="alter-form-fronting-notes">Fronting notes</label>
+                            <textarea id="alter-form-fronting-notes" class="input-field" rows="4" placeholder="Write fronting notes to review later..."></textarea>
+                        </div>
+                        <div class="button-container" style="margin-top: 10px; gap: 10px; display: flex; flex-wrap: wrap;">
+                            <button type="button" class="btn btn-primary" id="fronting-save-btn">Save changes</button>
+                            <button type="button" class="btn btn-secondary" id="fronting-cancel-btn">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="folder-details-modal" class="modal-overlay hidden">
+                <div class="folder-modal" id="folder-modal-content">
+                    <div class="folder-modal-header">
+                        <div>
+                            <h3 id="folder-modal-name"></h3>
+                            <p id="folder-modal-description" class="subtitle"></p>
+                        </div>
+                        <button type="button" class="folder-modal-close btn btn-secondary" id="folder-modal-close">Close</button>
+                    </div>
+                    <div class="folder-modal-body">
+                        <h4>Assigned alters</h4>
+                        <div id="folder-modal-alters" class="folder-modal-list"></div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
     <script>
         const currentUser = DB.getCurrentUser();
         let selectedAlterName = null;
+        let pendingFrontAlterName = null;
         let currentSettings = DB.getSettings();
 
         function getMyAlters() {
@@ -149,7 +209,7 @@
             rootList.innerHTML = folders.map(folder => {
                 const assignedCount = Array.isArray(folder.alters) ? folder.alters.length : 0;
                 return `
-                    <article class="folder-card">
+                    <article class="folder-card folder-card-clickable" data-folder-id="${folder.id}" style="border-color: ${escapeHTML(folder.theme || '#6366f1')};">
                         <div class="folder-card-header">
                             <strong>${escapeHTML(folder.name)}</strong>
                             <span>${assignedCount} alter${assignedCount === 1 ? '' : 's'}</span>
@@ -157,6 +217,12 @@
                         <p class="folder-card-desc">${escapeHTML(folder.description || 'No description provided.')}</p>
                     </article>`;
             }).join('');
+            rootList.querySelectorAll('.folder-card-clickable').forEach(card => {
+                card.addEventListener('click', () => {
+                    const folderId = card.dataset.folderId;
+                    openFolderDetails(folderId);
+                });
+            });
         }
 
         function escapeHTML(str) {
@@ -177,7 +243,7 @@
                 if (currentSettings.hideFolderedAlters && hiddenNames.has(alter.altername)) {
                     return false;
                 }
-                const haystack = `${alter.altername} ${alter.category} ${alter.prn} ${alter.description} ${alter.profileDescription || ''}`.toLowerCase();
+                const haystack = `${alter.altername} ${alter.prn} ${alter.description} ${alter.profileDescription || ''}`.toLowerCase();
                 return haystack.includes(query);
             });
 
@@ -218,7 +284,6 @@
                 card.innerHTML = `
                     <div class="alter-card-header">
                         <span class="alter-name">${escapeHTML(alter.altername)}</span>
-                        <span class="alter-badge ${badgeClass}">${escapeHTML(alter.category)}</span>
                     </div>
                     <div class="alter-pronouns">${escapeHTML(alter.prn)}</div>
                     <div class="alter-desc">${escapeHTML(alter.description || 'No description yet.')}</div>
@@ -262,23 +327,139 @@
             const alters = DB.getAlters();
             const target = alters.find(item => item.user.toLowerCase() === currentUser.toLowerCase() && item.altername.toLowerCase() === name.toLowerCase());
             if (!target) return;
-            const isFronting = target.status === 'Fronting';
-            target.status = isFronting ? 'Inactive' : 'Fronting';
-            if (!isFronting) {
-                target.frontingRole = 'Fronting';
+            if (target.status === 'Fronting') {
+                stopFronting(name);
+            } else {
+                showFrontingForm(target);
             }
+        }
+
+        function saveFrontingDetails() {
+            const alterName = document.getElementById('fronting-alter-name').value;
+            if (!alterName) return;
+            const alters = DB.getAlters();
+            const target = alters.find(item => item.user.toLowerCase() === currentUser.toLowerCase() && item.altername.toLowerCase() === alterName.toLowerCase());
+            if (!target) return;
+            target.status = 'Fronting';
+            target.frontingRole = document.getElementById('alter-form-fronting-role').value || 'Fronting';
+            target.mood = Number(document.getElementById('alter-form-mood').value) || 3;
+            target.energy = Number(document.getElementById('alter-form-energy').value) || 3;
+            target.frontingNotes = document.getElementById('alter-form-fronting-notes').value.trim();
             DB.saveAlters(alters);
-            DB.showToast(isFronting ? `${name} stopped fronting.` : `${name} is now fronting.`, 'success');
+            const fronters = DB.getFronters();
+            fronters[currentUser] = Array.isArray(fronters[currentUser]) ? fronters[currentUser] : [];
+            if (!fronters[currentUser].includes(target.altername)) {
+                fronters[currentUser].push(target.altername);
+            }
+            DB.saveFronters(fronters);
+            DB.showToast(`${target.altername} is now fronting.`, 'success');
+            hideFrontingForm();
+            renderAlters();
+        }
+
+        function showFrontingForm(alter) {
+            const modal = document.getElementById('fronting-modal');
+            const nameInput = document.getElementById('fronting-alter-name');
+            const title = document.getElementById('fronting-modal-title');
+            const sub = document.getElementById('fronting-modal-sub');
+            if (!modal) return;
+            nameInput.value = alter.altername;
+            title.innerText = `Fronting: ${alter.altername}`;
+            sub.innerText = alter.prn || '';
+            document.getElementById('alter-form-fronting-role').value = alter.frontingRole || 'Front';
+            document.getElementById('alter-form-mood').value = Number(alter.mood || 3);
+            document.getElementById('mood-value').innerText = document.getElementById('alter-form-mood').value;
+            document.getElementById('alter-form-energy').value = Number(alter.energy || 3);
+            document.getElementById('energy-value').innerText = document.getElementById('alter-form-energy').value;
+            document.getElementById('alter-form-fronting-notes').value = alter.frontingNotes || '';
+            modal.classList.remove('hidden');
+        }
+
+        function hideFrontingForm() {
+            const modal = document.getElementById('fronting-modal');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            document.getElementById('fronting-alter-name').value = '';
+        }
+
+        function stopFronting(name) {
+            const allAlters = DB.getAlters();
+            const target = allAlters.find(a => a.user.toLowerCase() === currentUser.toLowerCase() && a.altername.toLowerCase() === name.toLowerCase());
+            if (!target) return;
+            target.status = 'Inactive';
+            target.frontingRole = 'Inactive';
+            DB.saveAlters(allAlters);
+            const fronters = DB.getFronters();
+            if (fronters[currentUser]) {
+                fronters[currentUser] = fronters[currentUser].filter(n => n.toLowerCase() !== name.toLowerCase());
+                DB.saveFronters(fronters);
+            }
+            DB.showToast(`${target.altername} stopped fronting.`, 'success');
+            renderAlters();
+        }
+
+        function showFrontingForm(alter) {
+            const form = document.getElementById('front-form');
+            const frontingRole = document.getElementById('alter-form-fronting-role');
+            const moodInput = document.getElementById('alter-form-mood');
+            const energyInput = document.getElementById('alter-form-energy');
+            const notesInput = document.getElementById('alter-form-fronting-notes');
+            const hiddenInput = document.getElementById('fronting-alter-name');
+
+            if (!form || !frontingRole || !moodInput || !energyInput || !notesInput || !hiddenInput) return;
+
+            hiddenInput.value = alter.altername;
+            pendingFrontAlterName = alter.altername;
+            frontingRole.innerHTML = `
+                <option value="Fronting">Fronting</option>
+                <option value="Host">Host</option>
+                <option value="Protector">Protector</option>
+                <option value="Caregiver">Caregiver</option>
+                <option value="Persecutor">Persecutor</option>
+                <option value="Little">Little</option>
+                <option value="Other">Other</option>
+            `;
+            frontingRole.value = alter.frontingRole || 'Fronting';
+            moodInput.value = alter.mood || 3;
+            energyInput.value = alter.energy || 3;
+            notesInput.value = alter.frontingNotes || '';
+            document.getElementById('mood-value').innerText = moodInput.value;
+            document.getElementById('energy-value').innerText = energyInput.value;
+            form.classList.remove('hidden');
+            form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function hideFrontingForm() {
+            const form = document.getElementById('front-form');
+            if (!form) return;
+            form.classList.add('hidden');
+            pendingFrontAlterName = null;
+        }
+
+        function stopFronting(name) {
+            const alters = DB.getAlters();
+            const target = alters.find(item => item.user.toLowerCase() === currentUser.toLowerCase() && item.altername.toLowerCase() === name.toLowerCase());
+            if (!target) return;
+            target.status = 'Inactive';
+            DB.saveAlters(alters);
+            const fronters = DB.getFronters();
+            if (fronters[currentUser]) {
+                fronters[currentUser] = fronters[currentUser].filter(entry => entry.toLowerCase() !== name.toLowerCase());
+                DB.saveFronters(fronters);
+            }
+            DB.showToast(`${target.altername} stopped fronting.`, 'success');
             renderAlters();
         }
 
         function selectAlter(name) {
             selectedAlterName = name;
             const alter = getMyAlters().find(item => item.altername.toLowerCase() === name.toLowerCase());
+            const panel = document.getElementById('alter-profile-card');
             if (alter) {
-                const profileUrl = `alter-profile.html?alter=${encodeURIComponent(alter.altername)}`;
-                window.open(profileUrl, '_blank', 'noopener,noreferrer');
+                panel.classList.remove('hidden');
+                renderAlterProfile(alter);
             }
+            renderAlters();
         }
 
         function renderAlterProfile(alter) {
@@ -286,6 +467,20 @@
             const theme = alter.profileThemeColor || '#6366f1';
             const avatar = alter.profileImage || '';
             const banner = alter.profileBanner || '';
+
+            // sanitize description allowing basic markup
+            function sanitizeMarkup(html) {
+                if (!html) return '';
+                // strip the auto-import text if present
+                html = String(html).replace(/imported from JSON\./gi, '');
+                // allow a small set of tags
+                const allowed = ['b','i','em','strong','br','p','ul','ol','li','a'];
+                return html.replace(/<([^>]+)>/g, (match, tag) => {
+                    const tagName = tag.split(/\s+/)[0].replace(/\/.*/, '').toLowerCase();
+                    if (allowed.includes(tagName)) return `<${tag}>`;
+                    return '';
+                });
+            }
 
             panel.innerHTML = `
                 <div class="alter-profile-preview" style="background:${banner ? `linear-gradient(135deg, ${theme} 0%, rgba(10,12,16,0.9) 100%), url(${banner}) center/cover no-repeat` : `linear-gradient(135deg, ${theme} 0%, rgba(10,12,16,0.9) 100%)`};">
@@ -322,10 +517,12 @@
                     <div class="form-group">
                         <label for="alter-profile-description">Summary description</label>
                         <textarea id="alter-profile-description" class="input-field" rows="4">${escapeHTML(alter.description || '')}</textarea>
+                        <p class="profile-description-preview">${sanitizeMarkup(alter.description || '')}</p>
                     </div>
                     <div class="form-group">
                         <label for="alter-profile-details">Profile details</label>
                         <textarea id="alter-profile-details" class="input-field" rows="4" placeholder="Add personality notes, likes, dislikes, trigger info, and more...">${escapeHTML(alter.profileDescription || '')}</textarea>
+                        <div class="profile-details-preview">${sanitizeMarkup(alter.profileDescription || '')}</div>
                     </div>
                     <div class="form-group">
                         <label for="alter-profile-theme">Theme color</label>
@@ -477,9 +674,47 @@
             });
         }
 
+        function openFolderDetails(folderId) {
+            const folder = getMyFolders().find(folder => folder.id === folderId);
+            if (!folder) return;
+            const modal = document.getElementById('folder-details-modal');
+            const header = document.getElementById('folder-modal-name');
+            const description = document.getElementById('folder-modal-description');
+            const altersList = document.getElementById('folder-modal-alters');
+            const modalContent = document.getElementById('folder-modal-content');
+
+            header.innerText = folder.name;
+            description.innerText = folder.description || 'No description provided.';
+            modalContent.style.borderColor = folder.theme || '#6366f1';
+
+            const assignedAlterNames = Array.isArray(folder.alters) ? folder.alters : [];
+            altersList.innerHTML = '';
+            if (assignedAlterNames.length === 0) {
+                altersList.innerHTML = `<div class="folder-modal-alter">No alters are assigned to this folder yet.</div>`;
+            } else {
+                const alters = getMyAlters().filter(alter => assignedAlterNames.includes(alter.altername));
+                alters.forEach(alter => {
+                    altersList.innerHTML += `
+                        <div class="folder-modal-alter">
+                            <strong>${escapeHTML(alter.altername)}</strong>
+                            <div class="alter-pronouns">${escapeHTML(alter.prn)}</div>
+                            <div class="alter-desc">${escapeHTML(alter.description || 'No description yet.')}</div>
+                        </div>`;
+                });
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeFolderDetails() {
+            const modal = document.getElementById('folder-details-modal');
+            modal.classList.add('hidden');
+        }
+
         function renderFolderNode(folder, childrenMap) {
             const item = document.createElement('div');
             item.className = 'folder-item';
+            item.style.borderColor = folder.theme || '#6366f1';
             const assignedCount = Array.isArray(folder.alters) ? folder.alters.length : 0;
             const childFolders = (childrenMap.get(folder.id) || []).sort((a, b) => a.name.localeCompare(b.name));
             const childCount = childFolders.length;
@@ -507,12 +742,19 @@
                 item.appendChild(childrenContainer);
             }
 
+            item.addEventListener('click', (event) => {
+                if (event.target.closest('.folder-action')) return;
+                openFolderDetails(folder.id);
+            });
+
             item.querySelectorAll('.folder-action').forEach((button) => {
-                button.addEventListener('click', () => {
+                button.addEventListener('click', (event) => {
+                    event.stopPropagation();
                     const action = button.dataset.action;
                     const folderId = button.dataset.id;
                     if (action === 'edit') {
                         editFolder(folderId);
+                        openFolderEditor();
                     } else if (action === 'delete') {
                         deleteFolder(folderId);
                     }
@@ -572,6 +814,7 @@
             const description = descriptionInput.value.trim();
             const parentId = parentSelect.value || '';
             const assignedAlters = Array.from(altersSelect.selectedOptions).map(option => option.value);
+            const theme = document.getElementById('folder-theme').value || '#6366f1';
             const folderId = folderIdInput.value || '';
             const existingFolders = DB.getFolders();
             const folderMap = new Map(existingFolders.map(folder => [folder.id, folder]));
@@ -603,6 +846,7 @@
                         description,
                         parentId,
                         alters: assignedAlters,
+                        theme,
                         updatedAt: timestamp
                     };
                 }
@@ -618,6 +862,7 @@
                     description,
                     parentId,
                     alters: assignedAlters,
+                    theme,
                     createdAt: timestamp,
                     updatedAt: timestamp
                 });
@@ -635,6 +880,7 @@
             document.getElementById('folder-name').value = '';
             document.getElementById('folder-description').value = '';
             document.getElementById('folder-parent').value = '';
+            document.getElementById('folder-theme').value = '#6366f1';
             Array.from(document.getElementById('folder-alters').options).forEach(option => {
                 option.selected = false;
             });
@@ -647,6 +893,7 @@
             document.getElementById('folder-id').value = folder.id;
             document.getElementById('folder-name').value = folder.name;
             document.getElementById('folder-description').value = folder.description || '';
+            document.getElementById('folder-theme').value = folder.theme || '#6366f1';
             populateFolderSelectors(folderId);
             document.getElementById('folder-parent').value = folder.parentId || '';
 
@@ -740,6 +987,17 @@
             document.getElementById('btn-open-folder-editor').addEventListener('click', openFolderEditor);
             document.getElementById('folder-form').addEventListener('submit', handleFolderForm);
             document.getElementById('folder-reset-btn').addEventListener('click', resetFolderForm);
+            const saveFrontingBtn = document.getElementById('fronting-save-btn');
+            const cancelFrontingBtn = document.getElementById('fronting-cancel-btn');
+            if (saveFrontingBtn) {
+                saveFrontingBtn.addEventListener('click', saveFrontingDetails);
+            }
+            if (cancelFrontingBtn) {
+                cancelFrontingBtn.addEventListener('click', () => {
+                    if (!confirm('Cancel editing fronting details? Unsaved changes will be lost.')) return;
+                    hideFrontingForm();
+                });
+            }
             const menuToggle = document.getElementById('menu-toggle');
             const sideNav = document.getElementById('side-nav');
             const sideNavClose = document.getElementById('side-nav-close');
@@ -749,7 +1007,43 @@
             if (sideNavClose && sideNav) {
                 sideNavClose.addEventListener('click', () => sideNav.classList.add('hidden'));
             }
+            const modalClose = document.getElementById('folder-modal-close');
+            if (modalClose) {
+                modalClose.addEventListener('click', closeFolderDetails);
+            }
+            const modalOverlay = document.getElementById('folder-details-modal');
+            if (modalOverlay) {
+                modalOverlay.addEventListener('click', (event) => {
+                    if (event.target === modalOverlay) closeFolderDetails();
+                });
+            }
+            // fronting modal close handlers
+            const frontingModal = document.getElementById('fronting-modal');
+            const frontingClose = document.getElementById('fronting-modal-close');
+            if (frontingClose) frontingClose.addEventListener('click', () => hideFrontingForm());
+            if (frontingModal) frontingModal.addEventListener('click', (ev) => { if (ev.target === frontingModal) hideFrontingForm(); });
+            document.getElementById('alter-form-mood').addEventListener('input', (event) => {
+                document.getElementById('mood-value').innerText = event.target.value;
+            });
+            document.getElementById('alter-form-energy').addEventListener('input', (event) => {
+                document.getElementById('energy-value').innerText = event.target.value;
+            });
             updateSettingsUI();
+            // If navigated from fronters page requesting quick front edit
+            try {
+                if (location.hash === '#front') {
+                    const preset = localStorage.getItem('frontOpenAlter');
+                    if (preset) {
+                        const alter = getMyAlters().find(a => a.altername === preset);
+                        if (alter) showFrontingForm(alter);
+                        localStorage.removeItem('frontOpenAlter');
+                    } else {
+                        // open modal without preset (allow user to pick by clicking a card)
+                        const modal = document.getElementById('fronting-modal');
+                        if (modal) modal.classList.remove('hidden');
+                    }
+                }
+            } catch (e) { /* ignore */ }
         });
     </script>
 </body>
