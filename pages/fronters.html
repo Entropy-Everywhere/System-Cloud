@@ -7,6 +7,7 @@
     <meta name="description" content="Track active fronters in your system.">
     <title>System Cloud - Fronters</title>
     <link rel="stylesheet" href="../style.css">
+    <script src="firebase-config.js"></script>
     <script src="database.js"></script>
     <script>
         // Guard route: redirect to login if not authenticated
@@ -19,10 +20,21 @@
     <header class="navbar" id="dashboard-nav">
         <div class="nav-brand">System Cloud</div>
         <div class="nav-user">
-            <span class="user-tag" id="user-display">Loading...</span>
+            <button id="menu-toggle" class="btn btn-secondary">Menu</button>
+            <a href="Account/AccountView.html" class="user-tag" id="user-display">Loading...</a>
+            <a href="settings.html" class="btn btn-secondary">Settings</a>
             <button onclick="DB.logout()" class="btn-logout" id="btn-logout-act">Logout</button>
         </div>
     </header>
+
+    <nav id="side-nav" class="side-nav hidden" aria-label="Main navigation">
+        <button id="side-nav-close" class="btn btn-secondary" style="margin-bottom: 18px; width: 100%;">Close menu</button>
+        <a href="homepage.html" class="side-nav-link">Dashboard</a>
+        <a href="alters.html" class="side-nav-link">Alters</a>
+        <a href="fronters.html" class="side-nav-link">Fronters</a>
+        <a href="settings.html" class="side-nav-link">Settings</a>
+        <div class="side-nav-divider"></div>
+    </nav>
 
     <div class="container dashboard-container animate-fade-in" style="max-width: 1000px;">
         <div class="back-bar">
@@ -130,6 +142,11 @@
                 if (alter.category === 'Host') badgeClass = 'badge-host';
                 else if (alter.category === 'Protector') badgeClass = 'badge-protector';
 
+                const roleLabel = alter.frontingRole && alter.frontingRole !== 'Inactive' ? alter.frontingRole : 'Fronting';
+                const mood = Number(alter.mood || 3);
+                const energy = Number(alter.energy || 3);
+                const notes = alter.frontingNotes ? `<p class="fronting-notes">${escapeHTML(alter.frontingNotes)}</p>` : '';
+
                 card.innerHTML = `
                     <div class="alter-card-header">
                         <span class="alter-name">${escapeHTML(alter.altername)}</span>
@@ -137,6 +154,12 @@
                     </div>
                     <div class="alter-pronouns">${escapeHTML(alter.prn)}</div>
                     <div class="alter-desc">${escapeHTML(alter.description)}</div>
+                    <div class="fronters-active-metadata">
+                        <span><strong>Role:</strong> ${escapeHTML(roleLabel)}</span>
+                        <span><strong>Mood:</strong> ${mood}</span>
+                        <span><strong>Energy:</strong> ${energy}</span>
+                    </div>
+                    ${notes}
                     <div class="alter-card-footer">
                         <span class="alter-status status-fronting">
                             <span class="status-dot"></span>
@@ -212,6 +235,16 @@
             if (!currentUser) return;
             document.getElementById('user-display').innerText = `System: ${currentUser}`;
             loadFrontersDashboard();
+
+            const menuToggle = document.getElementById('menu-toggle');
+            const sideNav = document.getElementById('side-nav');
+            const sideNavClose = document.getElementById('side-nav-close');
+            if (menuToggle && sideNav) {
+                menuToggle.addEventListener('click', () => sideNav.classList.toggle('hidden'));
+            }
+            if (sideNavClose && sideNav) {
+                sideNavClose.addEventListener('click', () => sideNav.classList.add('hidden'));
+            }
         });
     </script>
 </body>

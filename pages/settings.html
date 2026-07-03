@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Manage System Cloud settings, theme, and import options.">
+    <title>System Cloud - Settings</title>
+    <link rel="stylesheet" href="../style.css">
+    <script src="firebase-config.js"></script>
+    <script src="database.js"></script>
+    <script>
+        DB.checkAuth(false);
+    </script>
+</head>
+
+<body>
+    <header class="navbar" id="dashboard-nav">
+        <div class="nav-brand">System Cloud</div>
+        <div class="nav-user">
+            <button id="menu-toggle" class="btn btn-secondary">Menu</button>
+            <a href="Account/AccountView.html" class="user-tag" id="user-display">Loading...</a>
+            <a href="homepage.html" class="btn btn-secondary">Dashboard</a>
+            <button onclick="DB.logout()" class="btn-logout" id="btn-logout-act">Logout</button>
+        </div>
+    </header>
+
+    <nav id="side-nav" class="side-nav hidden" aria-label="Main navigation">
+        <button id="side-nav-close" class="btn btn-secondary" style="margin-bottom: 18px; width: 100%;">Close menu</button>
+        <a href="homepage.html" class="side-nav-link">Dashboard</a>
+        <a href="alters.html" class="side-nav-link">Alters</a>
+        <a href="fronters.html" class="side-nav-link">Fronters</a>
+        <a href="settings.html" class="side-nav-link">Settings</a>
+        <div class="side-nav-divider"></div>
+    </nav>
+
+    <div class="container dashboard-container animate-fade-in" style="max-width: 900px;">
+        <div class="back-bar">
+            <a href="homepage.html" class="btn-back">&larr; Back to dashboard</a>
+        </div>
+
+        <section class="dashboard-header">
+            <h1>Settings</h1>
+            <p class="subtitle">Control theme, folder visibility, and import system members from JSON exports.</p>
+        </section>
+
+        <main class="dashboard-split">
+            <section class="panel">
+                <h2>Appearance</h2>
+                <p class="subtitle">Use the site theme control from one central settings page.</p>
+                <button id="theme-toggle-page" class="btn btn-primary">Toggle theme</button>
+            </section>
+
+            <section class="panel">
+                <h2>Directory Settings</h2>
+                <div class="settings-toggle-group" style="flex-direction: column; align-items: stretch; gap: 14px;">
+                    <label><input type="checkbox" id="toggle-hide-folders"> Hide folders across the alters directory</label>
+                    <label><input type="checkbox" id="toggle-hide-foldered-alters"> Hide alters that are assigned to folders</label>
+                </div>
+            </section>
+
+            <section class="panel">
+                <h2>Alter roles</h2>
+                <p class="subtitle">Roles your headmates may have within the system.</p>
+                <div class="form-group">
+                    <label>Available roles</label>
+                    <div id="role-list" class="role-list"></div>
+                </div>
+                <div class="form-group" style="display: flex; gap: 12px; align-items: flex-end;">
+                    <input type="text" id="new-alter-role" class="input-field" placeholder="Add a new alter role">
+                    <button type="button" id="btn-add-alter-role" class="btn btn-primary">Add role</button>
+                </div>
+                <p class="subtitle" style="margin-top: 0; color: var(--text-muted); font-size: 0.9rem;">A custom alter role will be available when selecting alter status on alter profiles.</p>
+            </section>
+        </main>
+
+        <section class="panel" style="margin-top: 24px;">
+            <h2>Import alters</h2>
+            <p class="subtitle">Upload member data from general JSON exports or supported system formats like Octocon and Hivemind.</p>
+            <div id="firebase-status" class="side-nav-status" style="margin-bottom: 18px;">Firebase: checking…</div>
+            <div class="form-group">
+                <label for="import-format">Import format</label>
+                <select id="import-format" class="input-field" style="background: rgba(25, 29, 39, 0.95); cursor: pointer;">
+                    <option value="general">General JSON</option>
+                    <option value="octocon">Octocon</option>
+                    <option value="hivemind">Hivemind</option>
+                </select>
+            </div>
+            <div class="button-container" style="gap: 12px; flex-direction: row;">
+                <button type="button" id="btn-import-json" class="btn btn-primary">Import JSON</button>
+                <span class="upload-help">Pick a JSON export file and import alters into your system.</span>
+            </div>
+            <input type="file" id="import-json-file" accept="application/json" hidden>
+        </section>
+    </div>
+
+    <script>
+        const currentUser = DB.getCurrentUser();
+
+        function escapeHTML(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function normalizeImportedAlter(raw) {
+            const pick = (...keys) => {
+                for (const key of keys) {
+                    const value = raw?.[key];
+                    if (value !== undefined && value !== null && value !== '') return String(value);
+                }
+                return '';
+            };
+
+            const name = pick('altername', 'alterName', 'name', 'displayName', 'username', 'title').trim();
+            const pronouns = pick('pronouns', 'pronoun', 'pronounSet', 'preferredPronouns').trim();
+            const description = pick('description', 'bio', 'summary', 'notes', 'about').trim();
+            const category = pick('category', 'role', 'type', 'kind').trim() || 'Other';
+            const status = pick('status', 'systemStatus', 'state').trim() || 'Inactive';
+            const profileDescription = pick('profileDescription', 'details', 'profileDetails', 'extraInfo', 'personality').trim();
+            const profileThemeColor = pick('profileThemeColor', 'themeColor', 'theme', 'color').trim() || '#6366f1';
+            const profileImage = pick('profileImage', 'avatar', 'avatarUrl', 'image', 'avatarImage').trim();
+            const profileBanner = pick('profileBanner', 'banner', 'bannerUrl', 'headerImage').trim();
+
+            return {
+                altername: name || 'Imported Alter',
+                description: description || 'Imported from JSON.',
+                prn: pronouns || 'they/them',
+                category: category || 'Other',
+                status: status || 'Inactive',
+                user: currentUser,
+                timestamp: new Date().toISOString(),
+                profileImage,
+                profileBanner,
+                profileDescription,
+                profileThemeColor,
+            };
+        }
+
+        function extractAlterCandidates(input, format) {
+            if (!input || typeof input !== 'object') return [];
+            const tryArray = (value) => Array.isArray(value) ? value : null;
+
+            if (format === 'octocon') {
+                return tryArray(input.alters)
+                    || tryArray(input.members)
+                    || tryArray(input.people)
+                    || tryArray(input.items)
+                    || [input];
+            }
+
+            if (format === 'hivemind') {
+                return tryArray(input.people)
+                    || tryArray(input.nodes)
+                    || tryArray(input.alters)
+                    || tryArray(input.members)
+                    || tryArray(input.items)
+                    || [input];
+            }
+
+            const candidates = [];
+            const keysToInspect = ['alters', 'members', 'people', 'data', 'items', 'results', 'nodes'];
+            for (const key of keysToInspect) {
+                if (tryArray(input[key])) {
+                    candidates.push(...input[key]);
+                }
+            }
+            if (candidates.length > 0) return candidates;
+            return [input];
+        }
+
+        function importJsonAlters(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function () {
+                try {
+                    const parsed = JSON.parse(reader.result);
+                    const format = document.getElementById('import-format').value;
+                    const candidates = extractAlterCandidates(parsed, format);
+                    const imported = candidates.map(normalizeImportedAlter).filter(alter => alter.altername);
+
+                    if (imported.length === 0) {
+                        DB.showToast('No alter data could be found in that JSON file.', 'error');
+                        return;
+                    }
+
+                    const allAlters = DB.getAlters();
+                    const existingNames = new Set(allAlters.filter(a => a.user.toLowerCase() === currentUser.toLowerCase()).map(alter => alter.altername.toLowerCase()));
+                    const merged = [];
+
+                    imported.forEach(alter => {
+                        if (!existingNames.has(alter.altername.toLowerCase())) {
+                            merged.push(alter);
+                            existingNames.add(alter.altername.toLowerCase());
+                        }
+                    });
+
+                    if (merged.length === 0) {
+                        DB.showToast('All imported alters already exist in your system.', 'error');
+                        return;
+                    }
+
+                    allAlters.push(...merged);
+                    DB.saveAlters(allAlters);
+                    DB.showToast(`${merged.length} alter${merged.length === 1 ? '' : 's'} imported successfully.`, 'success');
+                } catch (error) {
+                    DB.showToast('That file is not valid JSON.', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function renderAlterRoles() {
+            const settings = DB.getSettings();
+            const roleList = document.getElementById('role-list');
+            if (!roleList) return;
+            roleList.innerHTML = settings.alterRoles.map(role => `
+                <div class="role-pill">
+                    ${escapeHTML(role)}
+                    <button type="button" class="btn-remove-role" data-role="${escapeHTML(role)}" aria-label="Remove ${escapeHTML(role)}">×</button>
+                </div>
+            `).join('');
+            roleList.querySelectorAll('.btn-remove-role').forEach(button => {
+                button.addEventListener('click', () => removeAlterRole(button.dataset.role));
+            });
+        }
+
+        function addAlterRole() {
+            const input = document.getElementById('new-alter-role');
+            const role = input.value.trim();
+            if (!role) {
+                DB.showToast('Enter a role name before adding.', 'error');
+                return;
+            }
+            const settings = DB.getSettings();
+            if (settings.alterRoles.includes(role)) {
+                DB.showToast('This role already exists.', 'error');
+                return;
+            }
+            settings.alterRoles.push(role);
+            DB.saveSettings(settings);
+            input.value = '';
+            renderAlterRoles();
+            DB.showToast(`Added role '${role}'.`, 'success');
+        }
+
+        function removeAlterRole(role) {
+            const settings = DB.getSettings();
+            if (settings.alterRoles.length <= 1) {
+                DB.showToast('Keep at least one alter role.', 'error');
+                return;
+            }
+            settings.alterRoles = settings.alterRoles.filter(r => r !== role);
+            DB.saveSettings(settings);
+            renderAlterRoles();
+            DB.showToast(`Removed role '${role}'.`, 'success');
+        }
+
+        function updateSettingsUI() {
+            const settings = DB.getSettings();
+            document.getElementById('toggle-hide-folders').checked = settings.hideFolders;
+            document.getElementById('toggle-hide-foldered-alters').checked = settings.hideFolderedAlters;
+            const themeLabel = DB.getTheme() === 'light' ? 'Switch to dark mode' : 'Switch to light mode';
+            document.getElementById('theme-toggle-page').textContent = themeLabel;
+            renderAlterRoles();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('user-display').innerText = `System: ${currentUser}`;
+            updateSettingsUI();
+
+            document.getElementById('theme-toggle-page').addEventListener('click', () => {
+                DB.toggleTheme();
+                updateSettingsUI();
+            });
+
+            document.getElementById('toggle-hide-folders').addEventListener('change', (event) => {
+                const settings = DB.getSettings();
+                settings.hideFolders = event.target.checked;
+                DB.saveSettings(settings);
+            });
+
+            document.getElementById('toggle-hide-foldered-alters').addEventListener('change', (event) => {
+                const settings = DB.getSettings();
+                settings.hideFolderedAlters = event.target.checked;
+                DB.saveSettings(settings);
+            });
+
+            document.getElementById('btn-add-alter-role').addEventListener('click', addAlterRole);
+            document.getElementById('new-alter-role').addEventListener('keyup', (event) => {
+                if (event.key === 'Enter') {
+                    addAlterRole();
+                }
+            });
+
+            document.getElementById('btn-import-json').addEventListener('click', () => document.getElementById('import-json-file').click());
+            document.getElementById('import-json-file').addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    importJsonAlters(file);
+                    event.target.value = '';
+                }
+            });
+
+            const firebaseBadge = document.getElementById('firebase-status');
+            if (firebaseBadge) {
+                DB.initFirestore().then((connected) => {
+                    if (window.FIRESTORE_ENABLED) {
+                        firebaseBadge.textContent = connected ? 'Firebase: connected' : 'Firebase: disconnected';
+                        firebaseBadge.classList.toggle('status-good', connected);
+                        firebaseBadge.classList.toggle('status-bad', !connected);
+                    } else {
+                        firebaseBadge.textContent = 'Firebase: disabled';
+                        firebaseBadge.classList.remove('status-good', 'status-bad');
+                    }
+                });
+            }
+
+            const menuToggle = document.getElementById('menu-toggle');
+            const sideNav = document.getElementById('side-nav');
+            const sideNavClose = document.getElementById('side-nav-close');
+            if (menuToggle && sideNav) {
+                menuToggle.addEventListener('click', () => sideNav.classList.toggle('hidden'));
+            }
+            if (sideNavClose && sideNav) {
+                sideNavClose.addEventListener('click', () => sideNav.classList.add('hidden'));
+            }
+        });
+    </script>
+</body>
+
+</html>

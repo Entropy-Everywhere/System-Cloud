@@ -7,6 +7,7 @@
     <meta name="description" content="System Cloud Home.">
     <title>System Cloud - Home</title>
     <link rel="stylesheet" href="../style.css">
+    <script src="firebase-config.js"></script>
     <script src="database.js"></script>
     <script>
         // Guard route: redirect to login if not authenticated
@@ -19,8 +20,9 @@
     <header class="navbar" id="dashboard-nav">
         <div class="nav-brand">System Cloud</div>
         <div class="nav-user">
-            <a href="Account/AccountView.html" class="user-tag" id="user-display" style="text-decoration: none;">Loading...</a>
-            <button onclick="DB.logout()" class="btn-logout" id="btn-logout-act">Logout</button>
+            <a href="Account/AccountView.html" class="user-tag" id="user-display">Loading...</a>
+            <a href="settings.html" class="btn btn-secondary">Settings</a>
+            <button onclick="DB.logout()" class="btn btn-logout" id="btn-logout-act">Logout</button>
         </div>
     </header>
 
@@ -28,6 +30,7 @@
         <section class="dashboard-header">
             <h1 id="welcome-heading">Welcome back!</h1>
             <p class="subtitle" style="margin-bottom: 0;">Here is a summary of your system status</p>
+            <div id="preview-notice" class="preview-banner hidden">Preview mode: signed in as a demo system.</div>
         </section>
 
         <!-- Dynamic Statistics Cards -->
@@ -56,6 +59,10 @@
                 </div>
             </a>
         </main>
+
+        <div class="dashboard-footer" style="margin-top: 28px; display: flex; justify-content: center;">
+            <a href="settings.html" class="btn btn-secondary">Open Settings</a>
+        </div>
     </div>
 
     <script>
@@ -64,9 +71,21 @@
             const currentUser = DB.getCurrentUser();
             if (!currentUser) return;
 
-            // Update user tag
-            document.getElementById('user-display').innerText = `System: ${currentUser}`;
+            const userDisplay = document.getElementById('user-display');
+            if (userDisplay) {
+                userDisplay.innerText = `System: ${currentUser}`;
+            }
             document.getElementById('welcome-heading').innerText = `Welcome back, ${currentUser}!`;
+
+            const previewMode = new URLSearchParams(window.location.search).get('preview') === 'true';
+            if (previewMode) {
+                const banner = document.getElementById('preview-notice');
+                if (banner) {
+                    banner.classList.remove('hidden');
+                }
+            }
+
+            DB.initFirestore();
 
             // Fetch statistical values
             const alters = DB.getAlters().filter(a => a.user.toLowerCase() === currentUser.toLowerCase());
@@ -84,6 +103,7 @@
                 document.getElementById('stat-fronters-active').style.borderColor = 'var(--glass-border)';
                 document.getElementById('stat-fronters-active').style.background = 'rgba(255, 255, 255, 0.02)';
             }
+
         });
     </script>
 </body>

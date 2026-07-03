@@ -27,6 +27,27 @@ To publish this app on Itch.io as a web project:
 3. Make sure the uploaded files include `index.html` at the top level.
 4. Set the project to open the app in the browser from that uploaded build.
 
+This app is already set up as a PWA, so Itch.io hosting will allow users to install it from supported browsers.
+
+### Installable app on Itch.io
+
+For best results when hosting on Itch.io:
+
+1. Publish the project as a web build with `index.html` at the top level.
+2. Use a browser that supports PWA install prompts (Chrome, Edge, Brave, Safari on iOS/macOS with manual add-to-home-screen).
+3. When the app loads, the install button will appear if the browser supports it.
+4. On mobile, users can also install via the browser's Add to Home Screen workflow.
+
+## Firebase / Firestore setup
+
+1. Create a Firebase project at https://console.firebase.google.com/.
+2. Enable Firestore in the Firebase Console.
+3. Open `pages/firebase-config.js` and replace the placeholder values with your project settings.
+4. Set `window.FIRESTORE_ENABLED = true`.
+5. In Firestore rules during development, allow reads/writes for the project or configure user-based security rules.
+
+The app will continue using localStorage as a fallback if Firestore is not available or not enabled.
+
 ## Local preview
 
 Open `index.html` in a browser, or serve the folder with a simple static server.

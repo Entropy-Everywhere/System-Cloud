@@ -7,6 +7,7 @@
     <meta name="description" content="View and edit a specific alter profile.">
     <title>System Cloud - Alter Profile</title>
     <link rel="stylesheet" href="../style.css">
+    <script src="firebase-config.js"></script>
     <script src="database.js"></script>
     <script>
         DB.checkAuth(false);
@@ -28,7 +29,7 @@
                     <div>
                         <h1 id="alter-name">Alter profile</h1>
                         <p id="alter-pronouns" class="subtitle" style="margin-bottom: 10px;">Pronouns</p>
-                        <p id="alter-summary" class="subtitle" style="margin-bottom: 0;">Summary</p>
+                        <p id="alter-summary" class="subtitle" style="margin-bottom: 0;">Description</p>
                     </div>
                     <div class="account-stats">
                         <div class="stat-pill">Status <strong id="alter-status">Inactive</strong></div>
@@ -36,8 +37,8 @@
                     </div>
                 </div>
             </section>
-
-            <section class="glass-card account-form-card">
+            <button id="btn-edit-profile" class="btn btn-primary">Edit Profile</button>
+            <section class="glass-card account-form-card" id="alter-form-section">
                 <h2>Edit alter profile</h2>
                 <p class="subtitle">Update the profile details, uploads, and theme for this alter.</p>
 
@@ -62,19 +63,7 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="alter-form-status">System status</label>
-                        <select id="alter-form-status" class="input-field" required>
-                            <option value="Inactive">Inactive</option>
-                            <option value="Fronting">Fronting</option>
-                            <option value="Dormant">Dormant</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="alter-form-description">Summary description</label>
-                        <textarea id="alter-form-description" class="input-field" rows="4"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="alter-form-details">Profile details</label>
+                        <label for="alter-form-details">Description</label>
                         <textarea id="alter-form-details" class="input-field" rows="5" placeholder="Add personality notes, likes, dislikes, triggers, and more..."></textarea>
                     </div>
                     <div class="form-group">
@@ -112,6 +101,18 @@
             return alters.find(item => item.user.toLowerCase() === currentUser.toLowerCase() && item.altername.toLowerCase() === name.toLowerCase()) || null;
         }
 
+        function populateFrontingRoleOptions() {
+            const select = document.getElementById('alter-form-fronting-role');
+            const settings = DB.getSettings();
+            const roleOptions = Array.isArray(settings.frontingRoles) && settings.frontingRoles.length > 0
+                ? settings.frontingRoles.slice()
+                : ['Fronting', 'Co-Fronting', 'Co-Conscious'];
+            if (!roleOptions.includes('Inactive')) {
+                roleOptions.unshift('Inactive');
+            }
+            select.innerHTML = roleOptions.map(role => `<option value="${escapeHTML(role)}">${escapeHTML(role)}</option>`).join('');
+        }
+
         function renderAlter(alter) {
             if (!alter) {
                 document.getElementById('alter-name').innerText = 'Alter not found';
@@ -132,6 +133,13 @@
             document.getElementById('alter-form-pronouns').value = alter.prn || '';
             document.getElementById('alter-form-category').value = alter.category || 'Other';
             document.getElementById('alter-form-status').value = alter.status || 'Inactive';
+            populateFrontingRoleOptions();
+            document.getElementById('alter-form-fronting-role').value = alter.frontingRole || 'Inactive';
+            document.getElementById('alter-form-mood').value = alter.mood || 3;
+            document.getElementById('alter-form-energy').value = alter.energy || 3;
+            document.getElementById('alter-form-fronting-notes').value = alter.frontingNotes || '';
+            document.getElementById('mood-value').innerText = alter.mood || 3;
+            document.getElementById('energy-value').innerText = alter.energy || 3;
             document.getElementById('alter-form-description').value = alter.description || '';
             document.getElementById('alter-form-details').value = alter.profileDescription || '';
             document.getElementById('alter-form-theme').value = theme;
@@ -175,6 +183,10 @@
                 prn: document.getElementById('alter-form-pronouns').value.trim(),
                 category: document.getElementById('alter-form-category').value,
                 status: document.getElementById('alter-form-status').value,
+                frontingRole: document.getElementById('alter-form-fronting-role').value,
+                mood: Number(document.getElementById('alter-form-mood').value),
+                energy: Number(document.getElementById('alter-form-energy').value),
+                frontingNotes: document.getElementById('alter-form-fronting-notes').value.trim(),
                 description: document.getElementById('alter-form-description').value.trim(),
                 profileDescription: document.getElementById('alter-form-details').value.trim(),
                 profileThemeColor: document.getElementById('alter-form-theme').value
@@ -201,6 +213,12 @@
 
         document.getElementById('alter-avatar-upload').addEventListener('change', (event) => handleImageUpload(event, 'profileImage', 'Avatar'));
         document.getElementById('alter-banner-upload').addEventListener('change', (event) => handleImageUpload(event, 'profileBanner', 'Banner'));
+        document.getElementById('alter-form-mood').addEventListener('input', (event) => {
+            document.getElementById('mood-value').innerText = event.target.value;
+        });
+        document.getElementById('alter-form-energy').addEventListener('input', (event) => {
+            document.getElementById('energy-value').innerText = event.target.value;
+        });
 
         window.addEventListener('DOMContentLoaded', () => {
             renderAlter(getAlterFromQuery());

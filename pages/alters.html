@@ -7,6 +7,7 @@
     <meta name="description" content="Manage your system's alters.">
     <title>Plural Dashboard - Alters</title>
     <link rel="stylesheet" href="../style.css">
+    <script src="firebase-config.js"></script>
     <script src="database.js"></script>
     <script>
         DB.checkAuth(false);
@@ -17,10 +18,21 @@
     <header class="navbar" id="dashboard-nav">
         <div class="nav-brand">System Cloud</div>
         <div class="nav-user">
-            <span class="user-tag" id="user-display">Loading...</span>
-            <button onclick="DB.logout()" class="btn-logout" id="btn-logout-act">Logout</button>
+            <button id="menu-toggle" class="btn btn-secondary">Menu</button>
+            <a href="Account/AccountView.html" class="user-tag" id="user-display">Loading...</a>
+            <a href="settings.html" class="btn btn-secondary">Settings</a>
+            <button onclick="DB.logout()" class="btn btn-logout" id="btn-logout-act">Logout</button>
         </div>
     </header>
+
+    <nav id="side-nav" class="side-nav hidden" aria-label="Main navigation">
+        <button id="side-nav-close" class="btn btn-secondary" style="margin-bottom: 18px; width: 100%;">Close menu</button>
+        <a href="homepage.html" class="side-nav-link">Dashboard</a>
+        <a href="alters.html" class="side-nav-link">Alters</a>
+        <a href="fronters.html" class="side-nav-link">Fronters</a>
+        <a href="settings.html" class="side-nav-link">Settings</a>
+        <div class="side-nav-divider"></div>
+    </nav>
 
     <div class="container dashboard-container animate-fade-in" style="max-width: 1100px;">
         <div class="back-bar">
@@ -32,63 +44,65 @@
             <p class="subtitle">Search, browse, and edit detailed profiles for members of your plural system</p>
         </section>
 
-        <main class="dashboard-split">
-            <section class="panel">
-                <h2>Add System Member</h2>
-                <form id="add-alter-form" onsubmit="handleAddAlter(event)">
-                    <div class="form-group">
-                        <label for="altername">Alter Name</label>
-                        <input type="text" id="altername" class="input-field" placeholder="Name" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="pronouns">Pronouns</label>
-                        <input type="text" id="pronouns" class="input-field" placeholder="e.g. they/them, she/her" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="category">Category/Role</label>
-                        <select id="category" class="input-field" style="background: rgba(25, 29, 39, 0.95); cursor: pointer;" required>
-                            <option value="" disabled selected>Select role</option>
-                            <option value="Host">Host</option>
-                            <option value="Protector">Protector</option>
-                            <option value="Caregiver">Caregiver</option>
-                            <option value="Persecutor">Persecutor</option>
-                            <option value="Little">Little</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="status">System Status</label>
-                        <select id="status" class="input-field" style="background: rgba(25, 29, 39, 0.95); cursor: pointer;" required>
-                            <option value="Inactive">Inactive</option>
-                            <option value="Fronting">Fronting</option>
-                            <option value="Dormant">Dormant</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="description">Member Description</label>
-                        <textarea id="description" class="input-field" rows="4" placeholder="Describe their role, likes/dislikes, details..." style="resize: vertical;" required></textarea>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary" id="btn-add-alter">Add Member</button>
-                </form>
-            </section>
-
+        <main class="dashboard-full">
             <section class="panel">
                 <h2>System Directory</h2>
                 <p class="subtitle" style="margin-bottom: 16px;">Click any alter card to open their full profile details below.</p>
-                <div class="form-group" style="margin-bottom: 16px;">
-                    <label for="alter-search">Search alters</label>
-                    <input type="text" id="alter-search" class="input-field" placeholder="Search by name, role, or description">
+                <div class="directory-toolbar">
+                    <div class="toolbar-row">
+                        <div class="toolbar-actions">
+                            <button type="button" class="btn btn-primary" id="btn-add-alter">Add alter</button>
+                            <button type="button" class="btn btn-secondary" id="btn-open-folder-editor">New folder</button>
+                        </div>
+                        <div class="toolbar-search">
+                            <input type="text" id="alter-search" class="input-field" placeholder="Search by name, role, or description">
+                        </div>
+                    </div>
                 </div>
-                <div class="import-row" style="margin-bottom: 16px;">
-                    <input type="file" id="import-json-file" accept="application/json,.json" style="display: none;">
-                    <button type="button" id="import-json-btn" class="btn btn-secondary" style="width: auto; padding: 10px 16px;">Import JSON</button>
-                    <span class="upload-help">Import alters from a JSON export file.</span>
-                </div>
+
+                <div class="section-divider"></div>
+
+                <section class="root-folder-panel">
+                    <div class="root-folder-header">
+                        <h3>Root folders</h3>
+                        <p class="folder-note">Folders without a parent. Use this section to see your top-level groups first.</p>
+                    </div>
+                    <div id="root-folder-list" class="root-folder-list"></div>
+                </section>
+
+                <div class="section-divider"></div>
+
+                <section class="folders-panel hidden" id="folder-editor">
+                    <h3>Folder manager</h3>
+                    <p class="folder-note">Create or edit folders, assign alters, and nest folders under a parent.</p>
+                    <form id="folder-form" onsubmit="handleFolderForm(event)">
+                        <input type="hidden" id="folder-id" value="">
+                        <div class="form-group">
+                            <label for="folder-name">Folder name</label>
+                            <input type="text" id="folder-name" class="input-field" placeholder="Folder name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="folder-description">Folder description</label>
+                            <textarea id="folder-description" class="input-field" rows="3" placeholder="Describe this folder..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="folder-parent" class="folder-select-label">Parent folder</label>
+                            <select id="folder-parent" class="input-field" style="background: rgba(25, 29, 39, 0.95); cursor: pointer;">
+                                <option value="">No parent</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="folder-alters" class="folder-select-label">Assign alters</label>
+                            <select id="folder-alters" class="input-field" multiple size="4"></select>
+                        </div>
+                        <div class="button-container" style="margin-top: 8px;">
+                            <button type="submit" class="btn btn-primary">Save folder</button>
+                            <button type="button" id="folder-reset-btn" class="btn btn-secondary">Cancel</button>
+                        </div>
+                    </form>
+                    <div class="folders-tree" id="folder-tree"></div>
+                </section>
+
                 <div class="list-container" id="alters-list"></div>
 
                 <div class="alter-profile-card hidden" id="alter-profile-card">
@@ -101,10 +115,48 @@
     <script>
         const currentUser = DB.getCurrentUser();
         let selectedAlterName = null;
+        let currentSettings = DB.getSettings();
 
         function getMyAlters() {
             const allAlters = DB.getAlters();
             return allAlters.filter(a => a.user.toLowerCase() === currentUser.toLowerCase());
+        }
+
+        function getFolderedAlterNames() {
+            return new Set(getMyFolders().flatMap(folder => Array.isArray(folder.alters) ? folder.alters : []));
+        }
+
+        function renderRootFolders() {
+            const rootPanel = document.querySelector('.root-folder-panel');
+            const rootList = document.getElementById('root-folder-list');
+            if (!rootPanel || !rootList) return;
+
+            if (currentSettings.hideFolders) {
+                rootPanel.classList.add('hidden');
+                return;
+            }
+
+            rootPanel.classList.remove('hidden');
+            const folders = getMyFolders().filter(folder => !folder.parentId).sort((a, b) => a.name.localeCompare(b.name));
+            if (folders.length === 0) {
+                rootList.innerHTML = `
+                    <div class="empty-state" style="padding: 18px 0;">
+                        <p>No root folders yet. Create a folder to organize alters into groups.</p>
+                    </div>`;
+                return;
+            }
+
+            rootList.innerHTML = folders.map(folder => {
+                const assignedCount = Array.isArray(folder.alters) ? folder.alters.length : 0;
+                return `
+                    <article class="folder-card">
+                        <div class="folder-card-header">
+                            <strong>${escapeHTML(folder.name)}</strong>
+                            <span>${assignedCount} alter${assignedCount === 1 ? '' : 's'}</span>
+                        </div>
+                        <p class="folder-card-desc">${escapeHTML(folder.description || 'No description provided.')}</p>
+                    </article>`;
+            }).join('');
         }
 
         function escapeHTML(str) {
@@ -116,111 +168,15 @@
                 .replace(/'/g, '&#039;');
         }
 
-        function normalizeImportedAlter(raw) {
-            const pick = (...keys) => {
-                for (const key of keys) {
-                    const value = raw?.[key];
-                    if (value !== undefined && value !== null && value !== '') return String(value);
-                }
-                return '';
-            };
-
-            const name = pick('altername', 'alterName', 'name', 'displayName', 'username', 'title').trim();
-            const pronouns = pick('pronouns', 'pronoun', 'pronounSet', 'preferredPronouns').trim();
-            const description = pick('description', 'bio', 'summary', 'notes', 'about').trim();
-            const category = pick('category', 'role', 'type', 'kind').trim() || 'Other';
-            const status = pick('status', 'systemStatus', 'state').trim() || 'Inactive';
-            const profileDescription = pick('profileDescription', 'details', 'profileDetails', 'extraInfo', 'personality').trim();
-            const profileThemeColor = pick('profileThemeColor', 'themeColor', 'theme', 'color').trim() || '#6366f1';
-            const profileImage = pick('profileImage', 'avatar', 'avatarUrl', 'image', 'avatarImage').trim();
-            const profileBanner = pick('profileBanner', 'banner', 'bannerUrl', 'headerImage').trim();
-
-            return {
-                altername: name || 'Imported Alter',
-                description: description || 'Imported from JSON.',
-                prn: pronouns || 'they/them',
-                category: category || 'Other',
-                status: status || 'Inactive',
-                user: currentUser,
-                timestamp: new Date().toISOString(),
-                profileImage,
-                profileBanner,
-                profileDescription,
-                profileThemeColor
-            };
-        }
-
-        function extractAlterCandidates(input) {
-            if (Array.isArray(input)) {
-                return input.filter(item => item && typeof item === 'object');
-            }
-
-            if (input && typeof input === 'object') {
-                const candidates = [];
-                const keysToInspect = ['alters', 'members', 'people', 'data', 'items', 'results'];
-                for (const key of keysToInspect) {
-                    if (Array.isArray(input[key])) {
-                        candidates.push(...input[key].filter(item => item && typeof item === 'object'));
-                    }
-                }
-
-                if (candidates.length > 0) {
-                    return candidates;
-                }
-
-                return [input];
-            }
-
-            return [];
-        }
-
-        function importJsonAlters(file) {
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function () {
-                try {
-                    const parsed = JSON.parse(reader.result);
-                    const candidates = extractAlterCandidates(parsed);
-                    const imported = candidates.map(normalizeImportedAlter).filter(alter => alter.altername);
-
-                    if (imported.length === 0) {
-                        DB.showToast('No alter data could be found in that JSON file.', 'error');
-                        return;
-                    }
-
-                    const allAlters = DB.getAlters();
-                    const existingNames = new Set(getMyAlters().map(alter => alter.altername.toLowerCase()));
-                    const merged = [];
-
-                    imported.forEach(alter => {
-                        if (!existingNames.has(alter.altername.toLowerCase())) {
-                            merged.push(alter);
-                            existingNames.add(alter.altername.toLowerCase());
-                        }
-                    });
-
-                    if (merged.length === 0) {
-                        DB.showToast('All imported alters already exist in your system.', 'error');
-                        return;
-                    }
-
-                    allAlters.push(...merged);
-                    DB.saveAlters(allAlters);
-                    DB.showToast(`${merged.length} alter${merged.length === 1 ? '' : 's'} imported successfully.`, 'success');
-                    renderAlters();
-                } catch (error) {
-                    DB.showToast('That file is not valid JSON.', 'error');
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        function renderAlters() {
-            const listContainer = document.getElementById('alters-list');
+        function renderAlters() {            const listContainer = document.getElementById('alters-list');
             const searchInput = document.getElementById('alter-search');
             const query = searchInput.value.trim().toLowerCase();
             const myAlters = getMyAlters();
+            const hiddenNames = getFolderedAlterNames();
             const filteredAlters = myAlters.filter(alter => {
+                if (currentSettings.hideFolderedAlters && hiddenNames.has(alter.altername)) {
+                    return false;
+                }
                 const haystack = `${alter.altername} ${alter.category} ${alter.prn} ${alter.description} ${alter.profileDescription || ''}`.toLowerCase();
                 return haystack.includes(query);
             });
@@ -237,7 +193,8 @@
             }
 
             filteredAlters.forEach((alter) => {
-                const card = document.createElement('article');
+                const card = document.createElement('button');
+                card.type = 'button';
                 card.className = `alter-card${selectedAlterName && selectedAlterName.toLowerCase() === alter.altername.toLowerCase() ? ' selected' : ''}`;
 
                 let badgeClass = 'badge-other';
@@ -254,6 +211,10 @@
                     statusDotClass = 'status-inactive';
                 }
 
+                const folderLabels = currentSettings.hideFolders ? [] : getMyFolders()
+                    .filter(folder => Array.isArray(folder.alters) && folder.alters.includes(alter.altername))
+                    .map(folder => escapeHTML(folder.name));
+
                 card.innerHTML = `
                     <div class="alter-card-header">
                         <span class="alter-name">${escapeHTML(alter.altername)}</span>
@@ -261,20 +222,32 @@
                     </div>
                     <div class="alter-pronouns">${escapeHTML(alter.prn)}</div>
                     <div class="alter-desc">${escapeHTML(alter.description || 'No description yet.')}</div>
+                    ${folderLabels.length ? `<div class="alter-folders">${folderLabels.map(name => `<span class="folder-badge">${name}</span>`).join(' ')}</div>` : ''}
                     <div class="alter-card-footer">
                         <span class="alter-status ${statusDotClass}">
                             <span class="status-dot"></span>
                             ${statusLabel}
                         </span>
+                        <button type="button" class="btn btn-secondary btn-front-toggle" data-alter="${escapeHTML(alter.altername)}">
+                            ${alter.status === 'Fronting' ? 'Stop fronting' : 'Front now'}
+                        </button>
                         <span class="alter-view-link">View profile</span>
-                        <button class="btn-delete" type="button" title="Delete member">Delete</button>
+                        <span class="btn-delete" title="Delete member">Delete</span>
                     </div>
                 `;
 
-                card.addEventListener('click', () => selectAlter(alter.altername));
-                card.querySelector('.btn-delete').addEventListener('click', (event) => {
-                    event.stopPropagation();
-                    deleteAlter(alter.altername);
+                card.addEventListener('click', (event) => {
+                    if (event.target.closest('.btn-delete')) {
+                        event.stopPropagation();
+                        deleteAlter(alter.altername);
+                        return;
+                    }
+                    if (event.target.closest('.btn-front-toggle')) {
+                        event.stopPropagation();
+                        toggleFronting(alter.altername);
+                        return;
+                    }
+                    selectAlter(alter.altername);
                 });
 
                 listContainer.appendChild(card);
@@ -283,6 +256,20 @@
             if (!selectedAlterName && filteredAlters.length > 0) {
                 selectAlter(filteredAlters[0].altername);
             }
+        }
+
+        function toggleFronting(name) {
+            const alters = DB.getAlters();
+            const target = alters.find(item => item.user.toLowerCase() === currentUser.toLowerCase() && item.altername.toLowerCase() === name.toLowerCase());
+            if (!target) return;
+            const isFronting = target.status === 'Fronting';
+            target.status = isFronting ? 'Inactive' : 'Fronting';
+            if (!isFronting) {
+                target.frontingRole = 'Fronting';
+            }
+            DB.saveAlters(alters);
+            DB.showToast(isFronting ? `${name} stopped fronting.` : `${name} is now fronting.`, 'success');
+            renderAlters();
         }
 
         function selectAlter(name) {
@@ -405,60 +392,22 @@
             const index = allAlters.findIndex(item => item.user.toLowerCase() === currentUser.toLowerCase() && item.altername.toLowerCase() === selectedAlterName.toLowerCase());
             allAlters[index] = updatedAlter;
             DB.saveAlters(allAlters);
+
+            if (updatedAlter.altername !== selectedAlterName) {
+                const folders = DB.getFolders().map(folder => {
+                    if (!Array.isArray(folder.alters)) return folder;
+                    return {
+                        ...folder,
+                        alters: folder.alters.map(name => name.toLowerCase() === selectedAlterName.toLowerCase() ? updatedAlter.altername : name)
+                    };
+                });
+                DB.saveFolders(folders);
+            }
+
             DB.showToast('Alter profile saved.', 'success');
             selectedAlterName = updatedAlter.altername;
             renderAlters();
             renderAlterProfile(updatedAlter);
-        }
-
-        function handleAddAlter(event) {
-            event.preventDefault();
-            const name = document.getElementById('altername').value.trim();
-            const prn = document.getElementById('pronouns').value.trim();
-            const category = document.getElementById('category').value;
-            const status = document.getElementById('status').value;
-            const desc = document.getElementById('description').value.trim();
-            const allAlters = DB.getAlters();
-            const exists = allAlters.some(a => a.user.toLowerCase() === currentUser.toLowerCase() && a.altername.toLowerCase() === name.toLowerCase());
-
-            if (exists) {
-                DB.showToast('An alter with this name already exists in your system.', 'error');
-                return;
-            }
-
-            const newAlter = {
-                altername: name,
-                description: desc,
-                prn: prn,
-                category: category,
-                status: status,
-                user: currentUser,
-                timestamp: new Date().toISOString(),
-                profileImage: '',
-                profileBanner: '',
-                profileDescription: '',
-                profileThemeColor: '#6366f1'
-            };
-
-            allAlters.push(newAlter);
-            DB.saveAlters(allAlters);
-
-            if (status === 'Fronting') {
-                const fronters = DB.getFronters();
-                if (!fronters[currentUser]) {
-                    fronters[currentUser] = [];
-                }
-                if (!fronters[currentUser].includes(name)) {
-                    fronters[currentUser].push(name);
-                }
-                DB.saveFronters(fronters);
-            }
-
-            DB.showToast(`${name} added to the system directory!`, 'success');
-            document.getElementById('add-alter-form').reset();
-            selectedAlterName = name;
-            renderAlters();
-            renderAlterProfile(newAlter);
         }
 
         function deleteAlter(name) {
@@ -476,26 +425,331 @@
                 DB.saveFronters(fronters);
             }
 
+            const folders = DB.getFolders().map(folder => {
+                if (!Array.isArray(folder.alters)) return folder;
+                return {
+                    ...folder,
+                    alters: folder.alters.filter(alterName => alterName.toLowerCase() !== name.toLowerCase())
+                };
+            });
+            DB.saveFolders(folders);
+
             DB.showToast(`${name} removed from the system.`, 'success');
             selectedAlterName = null;
             renderAlters();
+            renderFolderTree();
             document.getElementById('alter-profile-card').classList.add('hidden');
             document.getElementById('alter-profile-card').innerHTML = '<div class="empty-state">Select an alter to view and edit their profile.</div>';
+        }
+
+        function getMyFolders() {
+            return DB.getFolders().filter(folder => folder.user && folder.user.toLowerCase() === currentUser.toLowerCase());
+        }
+
+        function buildFolderChildrenMap(folders) {
+            const map = new Map();
+            folders.forEach((folder) => {
+                const parentId = folder.parentId || '';
+                const items = map.get(parentId) || [];
+                items.push(folder);
+                map.set(parentId, items);
+            });
+            return map;
+        }
+
+        function renderFolderTree() {
+            const folderTree = document.getElementById('folder-tree');
+            const folders = getMyFolders();
+            if (folders.length === 0) {
+                folderTree.innerHTML = `
+                    <div class="empty-state">
+                        <p>No folders yet. Create a folder to organize alters into groups.</p>
+                    </div>`;
+                return;
+            }
+
+            const childrenMap = buildFolderChildrenMap(folders);
+            const rootFolders = (childrenMap.get('') || []).sort((a, b) => a.name.localeCompare(b.name));
+            folderTree.innerHTML = '';
+
+            rootFolders.forEach((folder) => {
+                folderTree.appendChild(renderFolderNode(folder, childrenMap));
+            });
+        }
+
+        function renderFolderNode(folder, childrenMap) {
+            const item = document.createElement('div');
+            item.className = 'folder-item';
+            const assignedCount = Array.isArray(folder.alters) ? folder.alters.length : 0;
+            const childFolders = (childrenMap.get(folder.id) || []).sort((a, b) => a.name.localeCompare(b.name));
+            const childCount = childFolders.length;
+
+            item.innerHTML = `
+                <div class="folder-heading">
+                    <div>
+                        <div class="folder-name">${escapeHTML(folder.name)}</div>
+                        <div class="folder-meta">${assignedCount} alter${assignedCount === 1 ? '' : 's'}${childCount ? ` · ${childCount} nested folder${childCount === 1 ? '' : 's'}` : ''}</div>
+                    </div>
+                    <div class="folder-actions">
+                        <button type="button" class="folder-action" data-id="${folder.id}" data-action="edit">Edit</button>
+                        <button type="button" class="folder-action" data-id="${folder.id}" data-action="delete">Delete</button>
+                    </div>
+                </div>
+                <div class="folder-description">${escapeHTML(folder.description || 'No description available.')}</div>
+            `;
+
+            if (childFolders.length > 0) {
+                const childrenContainer = document.createElement('div');
+                childrenContainer.className = 'folder-children';
+                childFolders.forEach((child) => {
+                    childrenContainer.appendChild(renderFolderNode(child, childrenMap));
+                });
+                item.appendChild(childrenContainer);
+            }
+
+            item.querySelectorAll('.folder-action').forEach((button) => {
+                button.addEventListener('click', () => {
+                    const action = button.dataset.action;
+                    const folderId = button.dataset.id;
+                    if (action === 'edit') {
+                        editFolder(folderId);
+                    } else if (action === 'delete') {
+                        deleteFolder(folderId);
+                    }
+                });
+            });
+
+            return item;
+        }
+
+        function populateFolderSelectors(selectedFolderId = '') {
+            const folders = getMyFolders();
+            const parentSelect = document.getElementById('folder-parent');
+            const alterSelect = document.getElementById('folder-alters');
+            const currentFolderId = selectedFolderId || document.getElementById('folder-id').value;
+
+            parentSelect.innerHTML = '<option value="">No parent</option>';
+            folders
+                .filter(folder => folder.id !== currentFolderId)
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .forEach(folder => {
+                    const option = document.createElement('option');
+                    option.value = folder.id;
+                    option.textContent = folder.name;
+                    parentSelect.appendChild(option);
+                });
+
+            alterSelect.innerHTML = '';
+            const myAlters = getMyAlters().sort((a, b) => a.altername.localeCompare(b.altername));
+            myAlters.forEach((alter) => {
+                const option = document.createElement('option');
+                option.value = alter.altername;
+                option.textContent = alter.altername;
+                alterSelect.appendChild(option);
+            });
+        }
+
+        function getDescendantFolderIds(folderId, folderMap) {
+            const descendants = [];
+            for (const folder of folderMap.values()) {
+                if (folder.parentId === folderId) {
+                    descendants.push(folder.id);
+                    descendants.push(...getDescendantFolderIds(folder.id, folderMap));
+                }
+            }
+            return descendants;
+        }
+
+        function handleFolderForm(event) {
+            event.preventDefault();
+            const folderIdInput = document.getElementById('folder-id');
+            const nameInput = document.getElementById('folder-name');
+            const descriptionInput = document.getElementById('folder-description');
+            const parentSelect = document.getElementById('folder-parent');
+            const altersSelect = document.getElementById('folder-alters');
+
+            const name = nameInput.value.trim();
+            const description = descriptionInput.value.trim();
+            const parentId = parentSelect.value || '';
+            const assignedAlters = Array.from(altersSelect.selectedOptions).map(option => option.value);
+            const folderId = folderIdInput.value || '';
+            const existingFolders = DB.getFolders();
+            const folderMap = new Map(existingFolders.map(folder => [folder.id, folder]));
+
+            if (!name) {
+                DB.showToast('Folder name is required.', 'error');
+                return;
+            }
+
+            if (folderId && parentId === folderId) {
+                DB.showToast('A folder cannot be its own parent.', 'error');
+                return;
+            }
+
+            if (folderId) {
+                const descendants = getDescendantFolderIds(folderId, folderMap);
+                if (descendants.includes(parentId)) {
+                    DB.showToast('You cannot choose a child folder as the parent.', 'error');
+                    return;
+                }
+            }
+
+            const timestamp = new Date().toISOString();
+            const updatedFolders = existingFolders.map(folder => {
+                if (folder.id === folderId) {
+                    return {
+                        ...folder,
+                        name,
+                        description,
+                        parentId,
+                        alters: assignedAlters,
+                        updatedAt: timestamp
+                    };
+                }
+                return folder;
+            });
+
+            if (!folderId) {
+                const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `folder-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+                updatedFolders.push({
+                    id: newId,
+                    user: currentUser,
+                    name,
+                    description,
+                    parentId,
+                    alters: assignedAlters,
+                    createdAt: timestamp,
+                    updatedAt: timestamp
+                });
+            }
+
+            DB.saveFolders(updatedFolders);
+            DB.showToast(folderId ? 'Folder updated.' : 'Folder created.', 'success');
+            resetFolderForm();
+            renderAlters();
+            renderFolderTree();
+        }
+
+        function resetFolderForm() {
+            document.getElementById('folder-id').value = '';
+            document.getElementById('folder-name').value = '';
+            document.getElementById('folder-description').value = '';
+            document.getElementById('folder-parent').value = '';
+            Array.from(document.getElementById('folder-alters').options).forEach(option => {
+                option.selected = false;
+            });
+            populateFolderSelectors();
+        }
+
+        function editFolder(folderId) {
+            const folder = getMyFolders().find(folder => folder.id === folderId);
+            if (!folder) return;
+            document.getElementById('folder-id').value = folder.id;
+            document.getElementById('folder-name').value = folder.name;
+            document.getElementById('folder-description').value = folder.description || '';
+            populateFolderSelectors(folderId);
+            document.getElementById('folder-parent').value = folder.parentId || '';
+
+            const alterNames = new Set(folder.alters || []);
+            Array.from(document.getElementById('folder-alters').options).forEach(option => {
+                option.selected = alterNames.has(option.value);
+            });
+        }
+
+        function deleteFolder(folderId) {
+            if (!confirm('Delete this folder and keep its children top-level?')) return;
+            const existingFolders = DB.getFolders();
+            const updatedFolders = existingFolders
+                .filter(folder => folder.id !== folderId)
+                .map(folder => (folder.parentId === folderId ? { ...folder, parentId: '' } : folder));
+            DB.saveFolders(updatedFolders);
+            DB.showToast('Folder deleted.', 'success');
+            resetFolderForm();
+            renderAlters();
+            renderFolderTree();
+        }
+
+        function renderFolderUI() {
+            renderRootFolders();
+            renderFolderTree();
+            populateFolderSelectors();
+        }
+
+        function openFolderEditor() {
+            const editor = document.getElementById('folder-editor');
+            if (!editor) return;
+            editor.classList.remove('hidden');
+            setTimeout(() => {
+                const folderName = document.getElementById('folder-name');
+                if (folderName) folderName.focus();
+            }, 50);
+        }
+
+        function promptAddAlter() {
+            const name = window.prompt('Add a new alter name:');
+            if (!name) return;
+            const trimmed = name.trim();
+            if (!trimmed) {
+                DB.showToast('Alter name cannot be empty.', 'error');
+                return;
+            }
+            const allAlters = DB.getAlters();
+            const exists = allAlters.some(a => a.user.toLowerCase() === currentUser.toLowerCase() && a.altername.toLowerCase() === trimmed.toLowerCase());
+            if (exists) {
+                DB.showToast('That alter already exists.', 'error');
+                return;
+            }
+            const pronouns = window.prompt('Pronouns for the new alter (optional)', 'they/them') || 'they/them';
+            const newAlter = {
+                altername: trimmed,
+                description: 'New system member.',
+                prn: pronouns.trim() || 'they/them',
+                category: 'Other',
+                status: 'Inactive',
+                user: currentUser,
+                timestamp: new Date().toISOString(),
+                profileImage: '',
+                profileBanner: '',
+                profileDescription: '',
+                profileThemeColor: '#6366f1',
+                frontingRole: 'Inactive',
+                mood: 3,
+                energy: 3,
+                frontingNotes: ''
+            };
+            allAlters.push(newAlter);
+            DB.saveAlters(allAlters);
+            DB.showToast(`${trimmed} added to the system directory.`, 'success');
+            selectedAlterName = trimmed;
+            renderAlters();
+            renderFolderUI();
+            renderAlterProfile(newAlter);
+        }
+
+        function updateSettingsUI() {
+            currentSettings = DB.getSettings();
+            renderFolderUI();
+            renderAlters();
         }
 
         window.addEventListener('DOMContentLoaded', () => {
             if (!currentUser) return;
             document.getElementById('user-display').innerText = `System: ${currentUser}`;
             document.getElementById('alter-search').addEventListener('input', renderAlters);
-            document.getElementById('import-json-btn').addEventListener('click', () => document.getElementById('import-json-file').click());
-            document.getElementById('import-json-file').addEventListener('change', (event) => {
-                const file = event.target.files[0];
-                if (file) {
-                    importJsonAlters(file);
-                    event.target.value = '';
-                }
-            });
-            renderAlters();
+            document.getElementById('btn-add-alter').addEventListener('click', promptAddAlter);
+            document.getElementById('btn-open-folder-editor').addEventListener('click', openFolderEditor);
+            document.getElementById('folder-form').addEventListener('submit', handleFolderForm);
+            document.getElementById('folder-reset-btn').addEventListener('click', resetFolderForm);
+            const menuToggle = document.getElementById('menu-toggle');
+            const sideNav = document.getElementById('side-nav');
+            const sideNavClose = document.getElementById('side-nav-close');
+            if (menuToggle && sideNav) {
+                menuToggle.addEventListener('click', () => sideNav.classList.toggle('hidden'));
+            }
+            if (sideNavClose && sideNav) {
+                sideNavClose.addEventListener('click', () => sideNav.classList.add('hidden'));
+            }
+            updateSettingsUI();
         });
     </script>
 </body>

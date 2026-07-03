@@ -7,10 +7,14 @@
     <meta name="description"
         content="A premium, secure personal dashboard to manage your system's alters and track active fronters.">
     <meta name="theme-color" content="#6366f1">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="System Cloud">
     <title>System Cloud</title>
     <link rel="stylesheet" href="./style.css">
     <link rel="manifest" href="./manifest.json">
-    <link rel="apple-touch-icon" href="./icons/SystemCloudLogo.png">
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
 </head>
 
 <body>
@@ -21,8 +25,10 @@
             </p>
 
             <div class="button-container">
+                <a class="btn btn-primary" href="pages/homepage.html?preview=true" id="btn-dashboard-preview">Dashboard Preview</a>
                 <a class="btn btn-primary" href="pages/login.html" id="btn-login-redirect">Login</a>
                 <a class="btn btn-secondary" href="pages/signup.html" id="btn-signup-redirect">Create Account</a>
+                <button class="btn btn-primary" id="btn-install-pwa" style="display:none; margin-top: 16px;">Install App</button>
             </div>
         </main>
     </div>
@@ -32,6 +38,30 @@
                 navigator.serviceWorker.register('./service-worker.js').catch(() => {});
             });
         }
+
+        let deferredInstallPrompt = null;
+        const installButton = document.getElementById('btn-install-pwa');
+
+        window.addEventListener('beforeinstallprompt', (event) => {
+            event.preventDefault();
+            deferredInstallPrompt = event;
+            installButton.style.display = 'inline-flex';
+        });
+
+        installButton.addEventListener('click', () => {
+            if (!deferredInstallPrompt) return;
+            deferredInstallPrompt.prompt();
+            deferredInstallPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    installButton.style.display = 'none';
+                }
+                deferredInstallPrompt = null;
+            });
+        });
+
+        window.addEventListener('appinstalled', () => {
+            installButton.style.display = 'none';
+        });
     </script>
 </body>
 
