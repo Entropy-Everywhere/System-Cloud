@@ -16,9 +16,8 @@
 
 <body>
     <header class="navbar" id="dashboard-nav">
-        <div class="nav-brand">System Cloud</div>
+        <div class="nav-brand" id="menu-toggle">System Cloud</div>
         <div class="nav-user">
-            <button id="menu-toggle" class="btn btn-secondary">Menu</button>
             <a href="Account/AccountView.html" class="user-tag" id="user-display">Loading...</a>
             <button onclick="DB.logout()" class="btn btn-logout" id="btn-logout-act">Logout</button>
         </div>
@@ -64,8 +63,6 @@
                 <section class="root-folder-panel">
                     <div class="root-folder-header">
                         <h3>Root folders</h3>
-                        <p class="folder-note">Folders without a parent. Use this section to see your top-level groups first.</p>
-                    </div>
                     <div id="root-folder-list" class="root-folder-list"></div>
                 </section>
 
@@ -99,8 +96,8 @@
                             <select id="folder-alters" class="input-field" multiple size="4"></select>
                         </div>
                         <div class="button-container" style="margin-top: 8px;">
-                            <button type="submit" class="btn btn-primary">Save folder</button>
-                            <button type="button" id="folder-reset-btn" class="btn btn-secondary">Cancel</button>
+                            <button type="submit" class="btn btn-primary" onclick="saveFolder()">Save folder</button>
+                            <button type="button" id="folder-reset-btn" class="btn btn-secondary" onclick="resetFolderForm()">Cancel</button>
                         </div>
                     </form>
                     <div class="folders-tree" id="folder-tree"></div>
@@ -108,7 +105,7 @@
 
                 <div class="list-container" id="alters-list"></div>
 
-                <div class="alter-profile-card hidden" id="alter-profile-card">
+                <div class="alter-profile-card hidden" id="alter-profile-card" visibility="hidden">
                     <div class="empty-state">Select an alter to view and edit their profile.</div>
                 </div>
             </section>
@@ -119,10 +116,10 @@
                             <h3 id="fronting-modal-title">Fronting details</h3>
                             <p class="subtitle" id="fronting-modal-sub"></p>
                         </div>
-                        <button type="button" class="folder-modal-close btn btn-secondary" id="fronting-modal-close">Close</button>
+                        <button type="button" class="folder-modal-close btn btn-secondary" id="fronting-modal-close" onclick="closeFrontingModal()">Close</button>
                     </div>
                     <div class="folder-modal-body">
-                        <input type="hidden" id="fronting-alter-name" value="">
+                        <input type="hidden" id="fronting-alter-form" value="">
                         <div class="form-group">
                             <label for="alter-form-fronting-role">Fronting role</label>
                             <select id="alter-form-fronting-role" class="input-field">
@@ -147,24 +144,9 @@
                             <textarea id="alter-form-fronting-notes" class="input-field" rows="4" placeholder="Write fronting notes to review later..."></textarea>
                         </div>
                         <div class="button-container" style="margin-top: 10px; gap: 10px; display: flex; flex-wrap: wrap;">
-                            <button type="button" class="btn btn-primary" id="fronting-save-btn">Save changes</button>
-                            <button type="button" class="btn btn-secondary" id="fronting-cancel-btn">Cancel</button>
+                            <button type="button" class="btn btn-primary" id="fronting-save-btn" onclick="saveFrontingNotes()">Save changes</button>
+                            <button type="button" class="btn btn-secondary" id="fronting-cancel-btn" onclick="cancelFrontingNotes()">Cancel</button>
                         </div>
-                    </div>
-                </div>
-            </div>
-            <div id="folder-details-modal" class="modal-overlay hidden">
-                <div class="folder-modal" id="folder-modal-content">
-                    <div class="folder-modal-header">
-                        <div>
-                            <h3 id="folder-modal-name"></h3>
-                            <p id="folder-modal-description" class="subtitle"></p>
-                        </div>
-                        <button type="button" class="folder-modal-close btn btn-secondary" id="folder-modal-close">Close</button>
-                    </div>
-                    <div class="folder-modal-body">
-                        <h4>Assigned alters</h4>
-                        <div id="folder-modal-alters" class="folder-modal-list"></div>
                     </div>
                 </div>
             </div>
@@ -247,6 +229,9 @@
                 return haystack.includes(query);
             });
 
+            // hide alter profile until clicked 
+            document.getElementById('alter-profile-card').classList.add('hidden');
+
             listContainer.innerHTML = '';
 
             if (filteredAlters.length === 0) {
@@ -293,7 +278,7 @@
                             <span class="status-dot"></span>
                             ${statusLabel}
                         </span>
-                        <button type="button" class="btn btn-secondary btn-front-toggle" data-alter="${escapeHTML(alter.altername)}">
+                        <button id="front-toggle" type="button" class="btn btn-secondary btn-front-toggle" data-alter="${escapeHTML(alter.altername)}" onclick="showFrontingForm(alter)">
                             ${alter.status === 'Fronting' ? 'Stop fronting' : 'Front now'}
                         </button>
                         <span class="alter-view-link">View profile</span>
@@ -358,21 +343,11 @@
         }
 
         function showFrontingForm(alter) {
-            const modal = document.getElementById('fronting-modal');
-            const nameInput = document.getElementById('fronting-alter-name');
-            const title = document.getElementById('fronting-modal-title');
-            const sub = document.getElementById('fronting-modal-sub');
-            if (!modal) return;
-            nameInput.value = alter.altername;
-            title.innerText = `Fronting: ${alter.altername}`;
-            sub.innerText = alter.prn || '';
-            document.getElementById('alter-form-fronting-role').value = alter.frontingRole || 'Front';
-            document.getElementById('alter-form-mood').value = Number(alter.mood || 3);
-            document.getElementById('mood-value').innerText = document.getElementById('alter-form-mood').value;
-            document.getElementById('alter-form-energy').value = Number(alter.energy || 3);
-            document.getElementById('energy-value').innerText = document.getElementById('alter-form-energy').value;
-            document.getElementById('alter-form-fronting-notes').value = alter.frontingNotes || '';
-            modal.classList.remove('hidden');
+            // show the alter fronting form when button is clicked
+            front-toggle.addEventListener("click"); {
+                document.getElementById("fronting-modal").style.visibility == true;
+                
+            }
         }
 
         function hideFrontingForm() {
@@ -452,120 +427,23 @@
         }
 
         function selectAlter(name) {
-            selectedAlterName = name;
-            const alter = getMyAlters().find(item => item.altername.toLowerCase() === name.toLowerCase());
-            const panel = document.getElementById('alter-profile-card');
-            if (alter) {
-                panel.classList.remove('hidden');
-                renderAlterProfile(alter);
-            }
-            renderAlters();
-        }
-
-        function renderAlterProfile(alter) {
-            const panel = document.getElementById('alter-profile-card');
-            const theme = alter.profileThemeColor || '#6366f1';
-            const avatar = alter.profileImage || '';
-            const banner = alter.profileBanner || '';
-
-            // sanitize description allowing basic markup
-            function sanitizeMarkup(html) {
-                if (!html) return '';
-                // strip the auto-import text if present
-                html = String(html).replace(/imported from JSON\./gi, '');
-                // allow a small set of tags
-                const allowed = ['b','i','em','strong','br','p','ul','ol','li','a'];
-                return html.replace(/<([^>]+)>/g, (match, tag) => {
-                    const tagName = tag.split(/\s+/)[0].replace(/\/.*/, '').toLowerCase();
-                    if (allowed.includes(tagName)) return `<${tag}>`;
-                    return '';
-                });
+            // not have alter selected by default, so we can open the profile card when an alter is clicked
+            let altercard = document.querySelector('.alter-card' + (selectedAlterName && selectedAlterName.toLowerCase() === name.toLowerCase() ? '.selected' : ''));
+            if (altercard) {
+                altercard.classList.remove('selected');
             }
 
-            panel.innerHTML = `
-                <div class="alter-profile-preview" style="background:${banner ? `linear-gradient(135deg, ${theme} 0%, rgba(10,12,16,0.9) 100%), url(${banner}) center/cover no-repeat` : `linear-gradient(135deg, ${theme} 0%, rgba(10,12,16,0.9) 100%)`};">
-                    <div class="alter-profile-avatar" style="background-image:${avatar ? `url(${avatar})` : 'none'}; color:${avatar ? 'transparent' : '#fff'};">${escapeHTML(alter.altername.charAt(0).toUpperCase())}</div>
-                </div>
-                <form id="alter-profile-form" class="alter-profile-form">
-                    <div class="form-group">
-                        <label for="alter-profile-name">Alter name</label>
-                        <input type="text" id="alter-profile-name" class="input-field" value="${escapeHTML(alter.altername)}" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="alter-profile-pronouns">Pronouns</label>
-                        <input type="text" id="alter-profile-pronouns" class="input-field" value="${escapeHTML(alter.prn)}" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="alter-profile-category">Category/Role</label>
-                        <select id="alter-profile-category" class="input-field" style="background: rgba(25, 29, 39, 0.95); cursor: pointer;" required>
-                            <option value="Host" ${alter.category === 'Host' ? 'selected' : ''}>Host</option>
-                            <option value="Protector" ${alter.category === 'Protector' ? 'selected' : ''}>Protector</option>
-                            <option value="Caregiver" ${alter.category === 'Caregiver' ? 'selected' : ''}>Caregiver</option>
-                            <option value="Persecutor" ${alter.category === 'Persecutor' ? 'selected' : ''}>Persecutor</option>
-                            <option value="Little" ${alter.category === 'Little' ? 'selected' : ''}>Little</option>
-                            <option value="Other" ${alter.category === 'Other' ? 'selected' : ''}>Other</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="alter-profile-status">System status</label>
-                        <select id="alter-profile-status" class="input-field" style="background: rgba(25, 29, 39, 0.95); cursor: pointer;" required>
-                            <option value="Inactive" ${alter.status === 'Inactive' ? 'selected' : ''}>Inactive</option>
-                            <option value="Fronting" ${alter.status === 'Fronting' ? 'selected' : ''}>Fronting</option>
-                            <option value="Dormant" ${alter.status === 'Dormant' ? 'selected' : ''}>Dormant</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="alter-profile-description">Summary description</label>
-                        <textarea id="alter-profile-description" class="input-field" rows="4">${escapeHTML(alter.description || '')}</textarea>
-                        <p class="profile-description-preview">${sanitizeMarkup(alter.description || '')}</p>
-                    </div>
-                    <div class="form-group">
-                        <label for="alter-profile-details">Profile details</label>
-                        <textarea id="alter-profile-details" class="input-field" rows="4" placeholder="Add personality notes, likes, dislikes, trigger info, and more...">${escapeHTML(alter.profileDescription || '')}</textarea>
-                        <div class="profile-details-preview">${sanitizeMarkup(alter.profileDescription || '')}</div>
-                    </div>
-                    <div class="form-group">
-                        <label for="alter-profile-theme">Theme color</label>
-                        <input type="color" id="alter-profile-theme" class="input-field color-input" value="${escapeHTML(theme)}">
-                    </div>
-                    <div class="form-group">
-                        <label for="alter-avatar-upload">Avatar image</label>
-                        <input type="file" id="alter-avatar-upload" class="input-field upload-input" accept="image/*">
-                        <p class="upload-help">Upload a portrait or avatar directly from your device.</p>
-                    </div>
-                    <div class="form-group">
-                        <label for="alter-banner-upload">Banner image</label>
-                        <input type="file" id="alter-banner-upload" class="input-field upload-input" accept="image/*">
-                        <p class="upload-help">Upload a banner image to display behind the alter profile.</p>
-                    </div>
-                    <div class="button-container">
-                        <button type="submit" class="btn btn-primary">Save profile</button>
-                        <button type="button" id="alter-delete-btn" class="btn btn-danger">Delete alter</button>
-                    </div>
-                </form>
-            `;
+            altercard.addEventListener('click', () => {
+                openAlterProfilePage(name);
+            });
 
-            panel.querySelector('#alter-profile-form').addEventListener('submit', saveAlterProfile);
-            panel.querySelector('#alter-delete-btn').addEventListener('click', () => deleteAlter(alter.altername));
-            panel.querySelector('#alter-avatar-upload').addEventListener('change', (event) => handleImageUpload(event, 'profileImage', 'Avatar'));
-            panel.querySelector('#alter-banner-upload').addEventListener('change', (event) => handleImageUpload(event, 'profileBanner', 'Banner'));
-        }
-
-        function handleImageUpload(event, fieldName, label) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function () {
-                const allAlters = DB.getAlters();
-                const targetAlter = allAlters.find(item => item.user.toLowerCase() === currentUser.toLowerCase() && item.altername.toLowerCase() === selectedAlterName.toLowerCase());
-                if (!targetAlter) return;
-                targetAlter[fieldName] = reader.result;
-                DB.saveAlters(allAlters);
-                DB.showToast(`${label} uploaded.`, 'success');
-                renderAlterProfile(targetAlter);
-                renderAlters();
-            };
-            reader.readAsDataURL(file);
+            function openAlterProfilePage(name) {
+                const url = new URL(window.location.href);
+                url.pathname = '/pages/alter-profile.html';
+                url.searchParams.set('alter', name);
+                window.location.href = url.toString();
+                // move alter information to alter profile
+            }
         }
 
         function saveAlterProfile(event) {
@@ -604,13 +482,13 @@
             DB.showToast('Alter profile saved.', 'success');
             selectedAlterName = updatedAlter.altername;
             renderAlters();
-            renderAlterProfile(updatedAlter);
+            openAlterProfilePage(updatedAlter.altername);
         }
 
         function deleteAlter(name) {
             if (!confirm(`Are you sure you want to delete ${name}?`)) {
                 return;
-            }
+            };
 
             let allAlters = DB.getAlters();
             allAlters = allAlters.filter(a => !(a.user.toLowerCase() === currentUser.toLowerCase() && a.altername.toLowerCase() === name.toLowerCase()));
@@ -632,6 +510,11 @@
             DB.saveFolders(folders);
 
             DB.showToast(`${name} removed from the system.`, 'success');
+            if (selectedAlterName && selectedAlterName.toLowerCase() === name.toLowerCase()) {
+                selectedAlterName = null;
+                document.getElementById('alter-profile-card').classList.add('hidden');
+                document.getElementById('alter-profile-card').innerHTML = '<div class="empty-state">Select an alter to view and edit their profile.</div>';
+            }
             selectedAlterName = null;
             renderAlters();
             renderFolderTree();
@@ -885,23 +768,54 @@
                 option.selected = false;
             });
             populateFolderSelectors();
+            document.getElementById('folder-editor').classList.add('hidden');
         }
 
         function editFolder(folderId) {
-            const folder = getMyFolders().find(folder => folder.id === folderId);
+            const folder = getMyFolders().find(f => f.id === folderId);
             if (!folder) return;
+
             document.getElementById('folder-id').value = folder.id;
             document.getElementById('folder-name').value = folder.name;
             document.getElementById('folder-description').value = folder.description || '';
-            document.getElementById('folder-theme').value = folder.theme || '#6366f1';
-            populateFolderSelectors(folderId);
             document.getElementById('folder-parent').value = folder.parentId || '';
-
-            const alterNames = new Set(folder.alters || []);
-            Array.from(document.getElementById('folder-alters').options).forEach(option => {
-                option.selected = alterNames.has(option.value);
+            document.getElementById('folder-theme').value = folder.theme || '#6366f1';
+            populateFolderSelectors(folder.id);
+            const altersSelect = document.getElementById('folder-alters');
+            Array.from(altersSelect.options).forEach(option => {
+                option.selected = Array.isArray(folder.alters) && folder.alters.includes(option.value);
             });
+            document.getElementById('folder-editor').classList.remove('hidden');
+
+            // edit folder should scroll into view
+            document.getElementById('folder-editor').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // allow user to edit the folder details
+            const nameInput = document.getElementById('folder-name');
+            if (nameInput) {
+                nameInput.focus();
+                nameInput.select();
+            }
+
+            const descriptionInput = document.getElementById('folder-description');
+            if (descriptionInput) {
+                descriptionInput.focus();
+                descriptionInput.select();
+            }
+
+            const parentSelect = document.getElementById('folder-parent');
+            if (parentSelect) {
+                parentSelect.focus();
+            }
+
+            const themeInput = document.getElementById('folder-theme');
+            if (themeInput) {
+                themeInput.focus();
+            }
+
+
         }
+
 
         function deleteFolder(folderId) {
             if (!confirm('Delete this folder and keep its children top-level?')) return;
@@ -933,19 +847,15 @@
         }
 
         function promptAddAlter() {
-            const name = window.prompt('Add a new alter name:');
+            // popup modal for adding a new alter
+            const name = window.prompt('Enter the name of the new alter:', '');
             if (!name) return;
             const trimmed = name.trim();
             if (!trimmed) {
                 DB.showToast('Alter name cannot be empty.', 'error');
                 return;
             }
-            const allAlters = DB.getAlters();
-            const exists = allAlters.some(a => a.user.toLowerCase() === currentUser.toLowerCase() && a.altername.toLowerCase() === trimmed.toLowerCase());
-            if (exists) {
-                DB.showToast('That alter already exists.', 'error');
-                return;
-            }
+
             const pronouns = window.prompt('Pronouns for the new alter (optional)', 'they/them') || 'they/them';
             const newAlter = {
                 altername: trimmed,

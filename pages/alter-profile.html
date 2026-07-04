@@ -17,7 +17,7 @@
 <body>
     <div class="container account-page animate-fade-in">
         <div class="back-bar">
-            <a href="alters.html" class="btn-back">← Back to alters</a>
+            <a href="/pages/alters.html" class="btn-back">← Back to alters</a>
         </div>
 
         <main class="account-shell">
@@ -90,6 +90,13 @@
     </div>
 
     <script>
+
+        // Get alter information 
+        const altername = getAlterFromQuery.name
+        const alterimage = getAlterFromQuery.profileImage
+
+        document.getElementById("alter-name") == altername
+
         function saveAlterProfile() {
             const alters = DB.getAlters();
             const index = alters.findIndex(item => item.user.toLowerCase() === currentUser.toLowerCase() && item.altername.toLowerCase() === currentAlter.altername.toLowerCase());

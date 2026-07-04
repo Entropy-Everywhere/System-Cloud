@@ -356,6 +356,7 @@ select.input-field {
   border-radius: 20px;
   font-size: 0.85rem;
   color: #c7d2fe;
+  text-decoration: none;
 }
 
 .btn-logout {
@@ -369,7 +370,7 @@ select.input-field {
   transition: var(--transition-smooth);
 }
 
-..btn-logout:hover {
+.btn-logout:hover {
   color: #ef4444;
   border-color: rgba(239, 68, 68, 0.4);
   background: rgba(239, 68, 68, 0.05);
@@ -709,7 +710,6 @@ select.input-field {
   margin-top: 12px;
   color: var(--text-muted);
   font-size: 0.9rem;
-}
   border: 1px solid var(--glass-border);
   border-radius: 16px;
   padding: 22px;
