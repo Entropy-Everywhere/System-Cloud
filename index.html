@@ -41,43 +41,6 @@
                 navigator.serviceWorker.register('./service-worker.js').catch(() => {});
             });
         }
-
-        // ── PWA Install Prompt ──
-        let deferredPrompt = null;
-        const installBtn = document.getElementById('btn-install-pwa');
-
-        window.addEventListener('beforeinstallprompt', (event) => {
-            // Prevent Chrome 67+ from auto-showing the prompt
-            event.preventDefault();
-            // Stash the event so it can be triggered later
-            deferredPrompt = event;
-            // Show the install button
-            if (installBtn) installBtn.style.display = '';
-        });
-
-        if (installBtn) {
-            installBtn.addEventListener('click', async () => {
-                if (!deferredPrompt) return;
-                // Show the install prompt
-                deferredPrompt.prompt();
-                const result = await deferredPrompt.userChoice;
-                if (result.outcome === 'accepted') {
-                    console.log('User accepted the install prompt');
-                } else {
-                    console.log('User dismissed the install prompt');
-                }
-                // Reset – prompt can only be used once
-                deferredPrompt = null;
-                installBtn.style.display = 'none';
-            });
-        }
-
-        window.addEventListener('appinstalled', () => {
-            // App was installed – hide the button
-            deferredPrompt = null;
-            if (installBtn) installBtn.style.display = 'none';
-            console.log('System Cloud was installed!');
-        });
     </script>
 </body>
 
