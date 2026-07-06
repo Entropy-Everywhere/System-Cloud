@@ -1,0 +1,52 @@
+{
+  "appId": "com.systemcloud.app",
+  "productName": "System Cloud",
+  "directories": {
+    "output": "dist"
+  },
+  "files": [
+    "**/*",
+    "!**/node_modules/**/*",
+    "!**/dist/**/*",
+    "!**/.git/**/*",
+    "!**/*.md"
+  ],
+  "includeSubNodeModules": true,
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
+    "artifactName": "System-Cloud-Setup-${version}.${ext}",
+    "icon": "icons/icon-512.png"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "deleteAppDataOnUninstall": false,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "System Cloud",
+    "installerIcon": "icons/icon-512.png",
+    "uninstallerIcon": "icons/icon-512.png",
+    "installerHeaderIcon": "icons/icon-512.png"
+  },
+  "linux": {
+    "target": [
+      {
+        "target": "AppImage",
+        "arch": ["x64"]
+      }
+    ],
+    "category": "Utility",
+    "icon": "icons/icon-512.png"
+  },
+  "mac": {
+    "target": ["dmg"],
+    "icon": "icons/icon-512.png",
+    "category": "public.app-category.productivity"
+  }
+}

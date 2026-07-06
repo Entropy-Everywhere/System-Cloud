@@ -1,0 +1,29 @@
+{
+  "name": "system-cloud",
+  "version": "1.0.0",
+  "description": "System Cloud - A plural system management app",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "npx electron-packager . System-Cloud --platform=win32 --arch=x64 --out=dist --icon=icons/icon-512.ico --overwrite --prune=true --ignore=node_modules/electron --ignore=node_modules/electron-builder --ignore=build.config.json --ignore=dist",
+    "zip": "powershell -Command \"Compress-Archive -Path dist\\System-Cloud-win32-x64\\* -DestinationPath dist\\System-Cloud-Windows.zip -Force\"",
+    "installer": "node build-installer.js",
+    "dist": "npm run build && npm run zip",
+    "dist-installer": "npm run build && node build-installer.js",
+    "build-www": "node scripts/build-www.js",
+    "sync-android": "node scripts/build-www.js && npx cap sync android",
+    "build-android": "node scripts/build-android.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-packager": "^17.1.2"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/cli": "^8.4.1",
+    "@capacitor/core": "^8.4.1",
+    "electron-winstaller": "^5.4.4"
+  }
+}

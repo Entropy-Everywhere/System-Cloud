@@ -1,0 +1,18 @@
+{
+  "appId": "com.systemcloud.app",
+  "appName": "System Cloud",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "allowNavigation": [],
+    "androidScheme": "https"
+  },
+  "linuxAndroidStudioPath": "",
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1000,
+      "backgroundColor": "#252932",
+      "androidSplashResourceName": "splash"
+    }
+  }
+}

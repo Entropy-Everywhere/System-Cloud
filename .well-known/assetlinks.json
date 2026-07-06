@@ -1,0 +1,15 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.systemcloud.app",
+      "sha256_cert_fingerprints": [
+        // ⚠️ Replace with your signing key's SHA256 fingerprint
+        // Generate it with:
+        //   keytool -list -v -keystore your-keystore.jks -alias your-alias 2>/dev/null | grep "SHA256:" | awk '{print $2}'
+        "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99"
+      ]
+    }
+  }
+]
