@@ -31,7 +31,7 @@
             }
         });
 
-        function handleLogin(event) {
+        async function handleLogin(event) {
             event.preventDefault();
             const user = document.getElementById("userinput").value.trim();
             const pass = document.getElementById("passwordinput").value;
@@ -39,6 +39,11 @@
             if (!user || !pass) {
                 DB.showToast("Please enter both username and password.", "error");
                 return;
+            }
+
+            // Sync Firestore data before checking credentials (critical for cross-device login)
+            if (window.FIRESTORE_ENABLED) {
+                await DB.initFirestore();
             }
 
             const result = DB.login(user, pass);

@@ -22,7 +22,7 @@
         // Redirect to homepage if already logged in
         DB.checkAuth(true);
 
-        function handleSignup(event) {
+        async function handleSignup(event) {
             event.preventDefault();
             const user = document.getElementById("userinput").value.trim();
             const email = document.getElementById("emailinput").value.trim();
@@ -44,6 +44,11 @@
             if (pass !== repass) {
                 DB.showToast("Passwords do not match.", "error");
                 return;
+            }
+
+            // Sync Firestore data first so we don't accidentally overwrite existing users
+            if (window.FIRESTORE_ENABLED) {
+                await DB.initFirestore();
             }
 
             const result = DB.signup(user, email, pass);

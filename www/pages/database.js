@@ -142,14 +142,17 @@ const DB = {
   getUsers() {
     const data = localStorage.getItem('plural_users');
     if (!data) {
+      // Firestore is enabled — don't seed demo defaults or overwrite cloud data.
+      // The caller (login/signup) should await initFirestore() first so that
+      // cloud data is synced into localStorage before this is called.
+      if (window.FIRESTORE_ENABLED) {
+        return [];
+      }
       const defaults = [
         { username: 'john_doe', email: 'john@example.com', password: 'password123' },
         { username: 'jane_smith', email: 'jane@example.com', password: 'password456' }
       ];
       localStorage.setItem('plural_users', JSON.stringify(defaults));
-      if (window.FIRESTORE_ENABLED) {
-        this.initFirestore().then(() => this._saveFirestoreDoc('users', 'users', defaults));
-      }
       return defaults;
     }
     return JSON.parse(data);
